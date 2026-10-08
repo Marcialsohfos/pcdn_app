@@ -1,0 +1,163 @@
+{
+    "name": "Gares",
+    "description": "Attribute Set pour la couche Gares : dropdowns et listes a choix multiple issus de la fiche d'attributs (les champs libres id, Nom de la gare, Zone desservie ne sont pas repris ici - a creer comme champs TEXT simples sur la couche).",
+    "fields": [
+        {
+            "name": "Axe",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Douala-Yaoundé",
+                "Yaoundé-Ngaoundéré",
+                "Douala-Ngaoundéré",
+                "Autre (préciser)"
+            ]
+        },
+        {
+            "name": "Type de gare",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Gare terminus",
+                "Gare principale (bifurcation)",
+                "Gare secondaire",
+                "Halte-arrêt"
+            ]
+        },
+        {
+            "name": "Etat fonctionnement",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Fonctionnelle",
+                "Partiellement fonctionnelle",
+                "Non fonctionnelle (à l'abandon)",
+                "En réhabilitation"
+            ]
+        },
+        {
+            "name": "Quai d'embarquement",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Existant - bon état",
+                "Existant - état dégradé",
+                "Inexistant"
+            ]
+        },
+        {
+            "name": "Connexion route",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Route bitumée",
+                "Route en terre praticable",
+                "Route en terre difficilement praticable",
+                "Aucune connexion routière"
+            ]
+        },
+        {
+            "name": "Mode d'accès à la gare (Apport)",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "A pied",
+                "Moto-taxi",
+                "Taxi ou véhicule particulier",
+                "Transport en commun (bus/car)",
+                "Vélo",
+                "Autre"
+            ]
+        },
+        {
+            "name": "Temps mis",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 15 min",
+                "15-30 min",
+                "30-60 min",
+                "> 60 min"
+            ]
+        },
+        {
+            "name": "Distance approximative",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 5 km",
+                "5-15 km",
+                "15-30 km",
+                "> 30 km"
+            ]
+        },
+        {
+            "name": "Présence de magasin",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Oui",
+                "Non"
+            ]
+        },
+        {
+            "name": "Type de magasin",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Magasin de stockage de marchandises",
+                "Entrepôt frigorifique",
+                "Magasin de matériel technique",
+                "Boutique-commerce",
+                "Autre"
+            ]
+        },
+        {
+            "name": "Capacité de stockage",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 100 t",
+                "100-500 t",
+                "500-1000 t",
+                "> 1000 t",
+                "Non applicable"
+            ]
+        },
+        {
+            "name": "Réseau de télécommunication",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Bonne couverture",
+                "Couverture faible",
+                "Aucune couverture"
+            ]
+        },
+        {
+            "name": "Opérateur de télécommunication",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "MTN",
+                "Orange",
+                "Camtel",
+                "Nexttel",
+                "Autre"
+            ]
+        }
+    ]
+}

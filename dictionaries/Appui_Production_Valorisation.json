@@ -1,0 +1,52 @@
+{
+  "name": "Appui_Production_Valorisation",
+  "description": "Dictionnaires de valeurs pour la couche Appui_Production_Valorisation (Type d'Unité, État de Fonctionnement, Connexion Corridor).",
+  "fields": [
+    {
+      "name": "Type_Infrastructure_Socio_Eco",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": [
+        "Hôpital de District / CMA",
+        "Centre de Santé Intégré (CSI)",
+        "École Primaire",
+        "Lycée / CES",
+        "Centre de Formation",
+        "Parc à bétail / Abattoir",
+        "Bas-fond aménagé",
+        "Magasin de stockage d'intrants / Silo",
+        "Unité de transformation (Moulin/Décortiqueuse)",
+        "Point d'eau / Forage communautaire",
+        "Poste de Police / Gendarmerie",
+        "Poste de Douane",
+        "Pèse-essieu",
+        "Poste Phytosanitaire",
+        "Bâtiment Administratif / Mairie"
+      ]
+    },
+    {
+      "name": "Etat_Fonctionnement",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": [
+        "Opérationnel (Bon état)",
+        "Opérationnel (Dégradé)",
+        "En panne / Hors service",
+        "En construction / Abandonné"
+      ]
+    },
+    {
+      "name": "Connexion_Corridor",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": [
+        "Bonne (Piste aménagée)",
+        "Moyenne (Piste dégradée)",
+        "Difficile (Piste impraticable)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "name": "Infrastructures_Ferroviaires",
+  "description": "Dictionnaires de valeurs pour la couche Infrastructures_Ferroviaires (Tronçon, Type, État, Connexion Route, Mode d'Apport).",
+  "fields": [
+    {
+      "name": "Troncon_Ferroviaire",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": ["Douala-Yaoundé", "Yaoundé-Bélabo", "Bélabo-Ngaoundéré"]
+    },
+    {
+      "name": "Type_Infrastructure_Ferroviaire",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": [
+        "Gare voyageurs",
+        "Gare marchandises (Fret)",
+        "Halte",
+        "Port sec / Plateforme logistique",
+        "Passage à niveau"
+      ]
+    },
+    {
+      "name": "Etat_Fonctionnement",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": [
+        "Opérationnel (Bon état)",
+        "Opérationnel (Dégradé)",
+        "En panne / Hors service",
+        "En construction / Abandonné"
+      ]
+    },
+    {
+      "name": "Connexion_Route_Gare",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": ["Piste bitumée", "Piste en terre", "Non connecté"]
+    },
+    {
+      "name": "Mode_Apport",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": ["Moto-taxi", "Marche", "Camion", "Minibus"]
+    }
+  ]
+}

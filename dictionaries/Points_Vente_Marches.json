@@ -1,0 +1,140 @@
+{
+    "name": "Point_de_vente_marche",
+    "description": "Attribute Set pour la couche Point de vente / Marche : dropdowns et listes a choix multiple issus de la fiche d'attributs (les champs libres id, nom, Zone desservie ne sont pas repris ici - a creer comme champs TEXT simples sur la couche).",
+    "fields": [
+        {
+            "name": "Zone d'implantation",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Hub gare ferroviaire",
+                "Marché urbain",
+                "Marché rural de collecte",
+                "Marché frontalier",
+                "Abords de route",
+                "Autre (préciser)"
+            ]
+        },
+        {
+            "name": "Type",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Hub logistique fret",
+                "Marché frontalier",
+                "Marché de collecte agricole",
+                "Point de vente informel",
+                "Marché de gros",
+                "Marché de détail"
+            ]
+        },
+        {
+            "name": "Type de marchandise",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Marchandises importées",
+                "Produits manufacturés",
+                "Produits agricoles",
+                "Bois d'œuvre",
+                "Produits de chasse",
+                "Produits vivriers",
+                "Produits de rente",
+                "Bétail",
+                "Autre"
+            ]
+        },
+        {
+            "name": "Origine flux",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Local",
+                "Transfrontalier",
+                "Importation"
+            ]
+        },
+        {
+            "name": "Présence magasin de stockage",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Oui",
+                "Non"
+            ]
+        },
+        {
+            "name": "Capacité de stockage",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 50 t",
+                "50–200 t",
+                "200–500 t",
+                "> 500 t",
+                "Non applicable"
+            ]
+        },
+        {
+            "name": "Présence aire de chargement",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Oui",
+                "Non"
+            ]
+        },
+        {
+            "name": "Type d'aire de chargement",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Aire bétonnée/aménagée",
+                "Aire en terre battue",
+                "Quai de chargement"
+            ]
+        },
+        {
+            "name": "Distance à la gare/route la plus proche",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 5 km",
+                "5–15 km",
+                "15–30 km",
+                "> 30 km"
+            ]
+        },
+        {
+            "name": "Fréquence d'activité",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Quotidienne",
+                "Hebdomadaire (jour de marché)",
+                "Occasionnelle / saisonnière"
+            ]
+        },
+        {
+            "name": "Réseau de télécommunication",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Bonne couverture",
+                "Couverture faible",
+                "Aucune couverture"
+            ]
+        }
+    ]
+}

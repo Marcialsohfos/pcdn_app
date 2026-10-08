@@ -1,0 +1,20 @@
+{
+  "name": "Ground_Truthing_LandCover",
+  "description": "Dictionnaire de valeurs pour la couche Ground_Truthing_LandCover (Classe d'Occupation du Sol).",
+  "fields": [
+    {
+      "name": "Classe_Occupation_Sol",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": [
+        "Zone bâtie dense / Urbaine",
+        "Zone bâtie diffuse / Rurale",
+        "Forêt dense / Couvert arborescent",
+        "Savane / Végétation basse",
+        "Zone humide / Marécage / Eau",
+        "Sol nu / Zone d'extraction"
+      ]
+    }
+  ]
+}

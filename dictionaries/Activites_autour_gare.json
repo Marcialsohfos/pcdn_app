@@ -1,0 +1,207 @@
+{
+    "name": "Activites_autour_gare",
+    "description": "Attribute Set pour la couche Activites autour gare : dropdowns et listes a choix multiple issus de la fiche d'attributs (les champs libres id, Nom/designation et Observations ne sont pas repris ici - a creer comme champs TEXT simples sur la couche).",
+    "fields": [
+        {
+            "name": "Type d'activité",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Commerce informel",
+                "Transport (gare routière informelle, stationnement moto-taxi)",
+                "Agriculture – champs riverains",
+                "Pâturage – élevage extensif",
+                "Artisanat",
+                "Restauration – hôtellerie",
+                "Occupation de l'emprise ferroviaire (habitat, dépôt)",
+                "Autre (préciser)"
+            ]
+        },
+        {
+            "name": "Type de culture",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Cultures vivrières",
+                "Cultures maraîchères",
+                "Cultures de rente",
+                "Autre"
+            ]
+        },
+        {
+            "name": "Type d'élevage / usage pastoral",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Bovins",
+                "Petits ruminants (ovins-caprins)",
+                "Transhumance de passage",
+                "Élevage sédentaire"
+            ]
+        },
+        {
+            "name": "Localisation par rapport à la gare/voie",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Dans l'emprise ferroviaire",
+                "Abords immédiats (< 50 m)",
+                "Zone périphérique (50–200 m)",
+                "Au-delà (> 200 m)"
+            ]
+        },
+        {
+            "name": "Distance à la voie ferrée",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 10 m",
+                "10–50 m",
+                "50–200 m",
+                "> 200 m"
+            ]
+        },
+        {
+            "name": "Statut d'occupation",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Formel / autorisé",
+                "Informel / toléré",
+                "Illégal / en litige"
+            ]
+        },
+        {
+            "name": "Nature du foncier occupé",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Domaine ferroviaire",
+                "Domaine public (route, trottoir)",
+                "Propriété privée",
+                "Terre communautaire ou coutumière",
+                "Non déterminé"
+            ]
+        },
+        {
+            "name": "Superficie estimée",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 0,5 ha",
+                "0,5–1 ha",
+                "1–5 ha",
+                "> 5 ha"
+            ]
+        },
+        {
+            "name": "Traversée du bétail sur la voie",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Oui, fréquente",
+                "Oui, occasionnelle",
+                "Non"
+            ]
+        },
+        {
+            "name": "Nombre d'exploitants / acteurs estimé",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 5",
+                "5–20",
+                "20–50",
+                "> 50"
+            ]
+        },
+        {
+            "name": "Genre des exploitants (dominant)",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Majoritairement hommes",
+                "Majoritairement femmes",
+                "Mixte"
+            ]
+        },
+        {
+            "name": "Ancienneté de l'activité",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 1 an",
+                "1–5 ans",
+                "5–10 ans",
+                "> 10 ans"
+            ]
+        },
+        {
+            "name": "Point de traversée informelle de la voie",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Oui",
+                "Non"
+            ]
+        },
+        {
+            "name": "Niveau de risque sécuritaire",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Faible",
+                "Moyen",
+                "Élevé"
+            ]
+        },
+        {
+            "name": "Impact sur l'exploitation ferroviaire",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Aucun",
+                "Gêne ponctuelle",
+                "Entrave récurrente à la circulation des trains"
+            ]
+        },
+        {
+            "name": "Accès aux services de base sur site",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Eau",
+                "Électricité",
+                "Assainissement",
+                "Aucun"
+            ]
+        },
+        {
+            "name": "Réseau de télécommunication",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Bonne couverture",
+                "Couverture faible",
+                "Aucune couverture"
+            ]
+        }
+    ]
+}

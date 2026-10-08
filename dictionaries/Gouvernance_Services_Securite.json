@@ -1,0 +1,152 @@
+{
+    "name": "Service_securite",
+    "description": "Attribute Set pour la couche Service de securite : dropdowns et listes a choix multiple issus de la fiche d'attributs (les champs libres id, Nom de l'unite, Zone de competence et Observations ne sont pas repris ici - a creer comme champs TEXT simples sur la couche).",
+    "fields": [
+        {
+            "name": "Type de service",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Police (commissariat)",
+                "Gendarmerie (brigade, légion)",
+                "Douane",
+                "Sapeurs-pompiers",
+                "Sécurité ferroviaire (police des chemins de fer)",
+                "Sécurité privée (société de gardiennage)",
+                "Comité de vigilance communautaire",
+                "Autre (préciser)"
+            ]
+        },
+        {
+            "name": "Niveau hiérarchique",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Poste / brigade de base",
+                "Commissariat central ou légion",
+                "Poste avancé ou mobile",
+                "Point de contrôle temporaire"
+            ]
+        },
+        {
+            "name": "État de fonctionnement",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Fonctionnel",
+                "Partiellement fonctionnel",
+                "Non fonctionnel"
+            ]
+        },
+        {
+            "name": "Effectif estimé",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 5 agents",
+                "5–15 agents",
+                "15–30 agents",
+                "> 30 agents"
+            ]
+        },
+        {
+            "name": "Moyens de mobilité disponibles",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Véhicule 4×4",
+                "Moto",
+                "Aucun moyen propre",
+                "Autre"
+            ]
+        },
+        {
+            "name": "Moyens de communication",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Radio VHF/HF",
+                "Téléphone mobile",
+                "Aucun moyen fiable"
+            ]
+        },
+        {
+            "name": "Distance / temps d'accès au corridor (gare ou voie)",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 15 min",
+                "15–30 min",
+                "30–60 min",
+                "> 60 min"
+            ]
+        },
+        {
+            "name": "Nature des interventions courantes",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Accidents de circulation",
+                "Vols et criminalité",
+                "Occupation illégale de l'emprise ferroviaire",
+                "Trafic ou contrebande",
+                "Conflits fonciers",
+                "Gestion de foules (marchés, gares)",
+                "Autre"
+            ]
+        },
+        {
+            "name": "Fréquence des interventions sur le corridor",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Faible (rare)",
+                "Moyenne",
+                "Élevée (fréquente)"
+            ]
+        },
+        {
+            "name": "Existence de convention / protocole avec l'exploitant ferroviaire",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Oui",
+                "Non",
+                "Ne sait pas"
+            ]
+        },
+        {
+            "name": "Source d'énergie",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Réseau électrique national",
+                "Solaire",
+                "Groupe électrogène",
+                "Aucune"
+            ]
+        },
+        {
+            "name": "Réseau de télécommunication",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Bonne couverture",
+                "Couverture faible",
+                "Aucune couverture"
+            ]
+        }
+    ]
+}

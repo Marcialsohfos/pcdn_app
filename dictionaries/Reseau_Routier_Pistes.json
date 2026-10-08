@@ -1,0 +1,54 @@
+{
+  "name": "Reseau_Routier_Pistes",
+  "description": "Dictionnaires de valeurs pour la couche Reseau_Routier_Pistes (Catégorie de Voie, Revêtement, Blocage, Praticabilité en Pluie).",
+  "fields": [
+    {
+      "name": "Categorie_Voie",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": [
+        "Route Nationale (RN)",
+        "Route Régionale",
+        "Voirie Primaire",
+        "Voirie Secondaire",
+        "Voirie Tertiaire",
+        "Piste rurale aménagée",
+        "Piste informelle"
+      ]
+    },
+    {
+      "name": "Type_Revetement",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": ["Bitume", "Enduit superficiel", "Pave autobloquant", "Gravier", "Latérite", "Terre", "Sable", "Caillouteux"]
+    },
+    {
+      "name": "Type_Blocage",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": [
+        "Zone d'embourbement",
+        "Pont endommagé",
+        "Érosion / Ravinement",
+        "Submersion / Inondation",
+        "Aucun"
+      ]
+    },
+    {
+      "name": "Praticabilite_Saison_Pluies",
+      "dataType": "TEXT",
+      "isStyling": false,
+      "defaultValue": "",
+      "values": [
+        "Accessible toute année (Toutes voitures)",
+        "Accessible saison sèche uniquement",
+        "Accessible 4x4 / Camion uniquement en pluie",
+        "Accessible uniquement Moto / Pied",
+        "Coupé / Impraticable en pluie"
+      ]
+    }
+  ]
+}

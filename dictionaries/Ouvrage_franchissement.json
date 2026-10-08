@@ -1,0 +1,152 @@
+{
+    "name": "Ouvrage_franchissement",
+    "description": "Attribute Set pour la couche Ouvrage de franchissement : dropdowns et listes a choix multiple issus de la fiche d'attributs (les champs libres id, Nom/repere, Zone desservie et Observations ne sont pas repris ici - a creer comme champs TEXT simples sur la couche).",
+    "fields": [
+        {
+            "name": "Type d'ouvrage",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Passage à niveau (PN) gardé",
+                "Passage à niveau (PN) non gardé",
+                "Pont-route (passage supérieur)",
+                "Pont-rail (passage inférieur)",
+                "Passerelle piétonne",
+                "Buse ou dalot (franchissement hydraulique)",
+                "Passage informel (traversée sauvage)",
+                "Autre (préciser)"
+            ]
+        },
+        {
+            "name": "Statut / caractère officiel",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Ouvrage officiel aménagé",
+                "Traversée tolérée non aménagée",
+                "Traversée sauvage (interdite)"
+            ]
+        },
+        {
+            "name": "Usage principal",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Piétons",
+                "Deux-roues (moto, vélo)",
+                "Véhicules légers",
+                "Poids lourds",
+                "Bétail / transhumance",
+                "Engins agricoles"
+            ]
+        },
+        {
+            "name": "État de l'ouvrage",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Bon état",
+                "État moyen (dégradations mineures)",
+                "Mauvais état (dégradations majeures)",
+                "Impraticable / hors service"
+            ]
+        },
+        {
+            "name": "Dispositif de sécurité",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Barrières automatiques",
+                "Barrières manuelles",
+                "Signalisation lumineuse",
+                "Signalisation par panneaux uniquement",
+                "Gardien-barrières présent",
+                "Aucun dispositif"
+            ]
+        },
+        {
+            "name": "Présence de gardien-barrières",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Oui, permanent",
+                "Oui, temporaire (heures de passage des trains)",
+                "Non"
+            ]
+        },
+        {
+            "name": "Visibilité de l'ouvrage",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Bonne (dégagée)",
+                "Moyenne (obstacles partiels)",
+                "Mauvaise (végétation, courbe, bâti)"
+            ]
+        },
+        {
+            "name": "Fréquence de circulation (route)",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Faible (trafic occasionnel)",
+                "Moyenne",
+                "Forte (axe très fréquenté)"
+            ]
+        },
+        {
+            "name": "Historique d'accidents signalés",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Aucun accident connu",
+                "Accidents rares (1 à 2)",
+                "Accidents fréquents (> 2)"
+            ]
+        },
+        {
+            "name": "Connexion à une route classée",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Route bitumée",
+                "Route en terre praticable",
+                "Piste rurale",
+                "Sentier piéton uniquement"
+            ]
+        },
+        {
+            "name": "Distance à la gare la plus proche",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 2 km",
+                "2–5 km",
+                "5–10 km",
+                "> 10 km"
+            ]
+        },
+        {
+            "name": "Nécessité de réhabilitation/aménagement",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Oui, urgente",
+                "Oui, à moyen terme",
+                "Non nécessaire"
+            ]
+        }
+    ]
+}

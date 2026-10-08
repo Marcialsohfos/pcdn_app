@@ -1,0 +1,119 @@
+{
+    "name": "Services_Sociaux_Bases",
+    "description": "Attribute Set pour la couche Services sociaux de base : dropdowns et listes a choix multiple issus de la fiche d'attributs. Le champ 'Type equipement' liste toutes les valeurs des sous-listes conditionnelles par domaine (Sante, Education, Securite, Elevage-agriculture, Hebergement) prefixees par le domaine, car les listes dependantes/filtrees ne sont pas nativement supportees par un Attribute Set Mapit GIS ; a filtrer manuellement selon le domaine choisi lors de la saisie. Les champs libres id, Nom de l'etablissement, Zone desservie ne sont pas repris ici.",
+    "fields": [
+        {
+            "name": "Type de service / Domaine d'activité",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Santé",
+                "Éducation",
+                "Sécurité",
+                "Hydraulique",
+                "Hébergement",
+                "Élevage-agriculture",
+                "Autre (préciser)"
+            ]
+        },
+        {
+            "name": "Type équipement",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Santé – CSI",
+                "Santé – CMA",
+                "Santé – Hôpital de district",
+                "Santé – Pharmacie",
+                "Éducation – École primaire (EP)",
+                "Éducation – Collège",
+                "Éducation – Lycée",
+                "Éducation – Centre de formation professionnelle",
+                "Sécurité – Poste de gendarmerie",
+                "Sécurité – Commissariat de police",
+                "Sécurité – Poste de douane",
+                "Élevage-agriculture – Parc à bétail",
+                "Élevage-agriculture – Abattoir",
+                "Élevage-agriculture – Bas-fond aménagé",
+                "Hébergement – Hôtel",
+                "Hébergement – Auberge",
+                "Hébergement – Motel",
+                "Hébergement – Case de passage",
+                "Autre – à préciser"
+            ]
+        },
+        {
+            "name": "État de fonctionnement",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Fonctionnel",
+                "Partiellement fonctionnel",
+                "Non fonctionnel (à l'abandon)",
+                "En construction ou réhabilitation"
+            ]
+        },
+        {
+            "name": "Source d'énergie",
+            "dataType": "MULTISELECT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Solaire",
+                "SONADEL",
+                "Groupe électrogène",
+                "Aucune",
+                "Autre (préciser)"
+            ]
+        },
+        {
+            "name": "Temps d'accès au corridor",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 15 min",
+                "15–30 min",
+                "30–60 min",
+                "> 60 min"
+            ]
+        },
+        {
+            "name": "Accessibilité",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Toute l'année",
+                "Saison sèche uniquement",
+                "Saison pluvieuse uniquement"
+            ]
+        },
+        {
+            "name": "Capacité d'accueil",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "< 10",
+                "10–50",
+                "50–100",
+                "> 100"
+            ]
+        },
+        {
+            "name": "Réseau de télécommunication",
+            "dataType": "TEXT",
+            "isStyling": false,
+            "defaultValue": "",
+            "values": [
+                "Bonne couverture",
+                "Couverture faible",
+                "Aucune couverture"
+            ]
+        }
+    ]
+}
