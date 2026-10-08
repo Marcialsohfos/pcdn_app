@@ -128,8 +128,9 @@ with tabs[0]:
                             log(f"❌ {s.path}: {e}")
                     if cl:
                         cl.close()
-                    SS.raw, SS.struct = readers.ingest(resolved, log)
-                    SS.issues_raw = qa.run_all_qa(SS.raw, DOMAINS, SS.struct, dup_tol)
+                    raw, struct = readers.ingest(resolved, log)
+                    issues_raw = qa.run_all_qa(raw, DOMAINS, struct, dup_tol)
+                    SS.raw, SS.struct, SS.issues_raw = raw, struct, issues_raw   # affectés ensemble, seulement si tout a réussi
                     SS.clean = SS.issues_clean = SS.bundle = None
                     bar.empty()
                     st.success(f"{sum(len(g) for g in SS.raw.values())} entités lues dans {len(SS.raw)} couche(s). "
@@ -137,6 +138,7 @@ with tabs[0]:
                 except Exception as e:  # noqa
                     bar.empty()
                     st.error(f"Erreur : {e}")
+                    st.exception(e)
     if SS.log:
         with st.expander("Journal", expanded=False):
             st.code("\n".join(SS.log))
@@ -145,7 +147,13 @@ with tabs[0]:
 # ================================================================== helpers
 def current():
     """Jeu de données courant : nettoyé si disponible, sinon brut."""
-    return (SS.clean, SS.issues_clean, "pré-traité") if SS.clean is not None else (SS.raw, SS.issues_raw, "brut")
+    if SS.clean is not None:
+        if SS.issues_clean is None:
+            SS.issues_clean = qa.run_all_qa(SS.clean, DOMAINS, None, dup_tol)
+        return SS.clean, SS.issues_clean, "pré-traité"
+    if SS.issues_raw is None:   # filet de sécurité : recalcul si absent
+        SS.issues_raw = qa.run_all_qa(SS.raw, DOMAINS, SS.struct, dup_tol)
+    return SS.raw, SS.issues_raw, "brut"
 
 
 def show_map(layers: dict, key: str):
