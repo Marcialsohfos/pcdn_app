@@ -19,12 +19,18 @@ STATUS_COLOR = {"OK": "ff50b45a", "WARNING": "ff1e9bf5", "ERROR": "ff3c3cdc"}  #
 HIDDEN = {"_rid", "geometry"}
 
 
+def _undup(g):
+    """Supprime les colonnes en double (g[c] renverrait alors un DataFrame et non une Series)."""
+    return g.loc[:, ~g.columns.duplicated()]
+
+
 def export_cols(g: gpd.GeoDataFrame) -> list[str]:
     return [c for c in g.columns if c not in HIDDEN]
 
 
 def _prep(g: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Types compatibles écriture OGR."""
+    g = _undup(g)
     g = g[export_cols(g) + ["geometry"]].copy()
     for c in g.columns:
         if str(g[c].dtype) == "Int64":
@@ -95,8 +101,20 @@ def _coords(geom) -> str:
     return " ".join(f"{x:.7f},{y:.7f},0" for x, y, *_ in geom.coords)
 
 
+def _kml_geom(p) -> str:
+    if p.geom_type == "Point":
+        return f"<Point><coordinates>{p.x:.7f},{p.y:.7f},0</coordinates></Point>"
+    if p.geom_type == "Polygon":
+        inner = "".join(f"<innerBoundaryIs><LinearRing><coordinates>{_coords(r)}</coordinates></LinearRing></innerBoundaryIs>"
+                        for r in p.interiors)
+        return (f"<Polygon><outerBoundaryIs><LinearRing><coordinates>{_coords(p.exterior)}</coordinates></LinearRing>"
+                f"</outerBoundaryIs>{inner}</Polygon>")
+    return f"<LineString><tessellate>1</tessellate><coordinates>{_coords(p)}</coordinates></LineString>"
+
+
 def kml_folder(g: gpd.GeoDataFrame, layer: str) -> str:
     spec = LAYERS[layer]
+    g = _undup(g)
     cols = [c for c in export_cols(g)]
     out = [f"<Folder><name>{_x(layer)}</name>"]
     for _, r in g.iterrows():
@@ -104,13 +122,12 @@ def kml_folder(g: gpd.GeoDataFrame, layer: str) -> str:
         if geom is None or geom.is_empty:
             continue
         status = r.get("qa_status", "OK")
-        label = r.get(spec.id_field) or ""
+        label = r.get(spec.id_field)
+        label = "" if label is None or pd.isna(label) else label
         data = "".join(f'<Data name="{_x(c)}"><value>{_x(r[c])}</value></Data>'
                        for c in cols if not pd.isna(r[c]) and str(r[c]) != "")
         parts = geom.geoms if hasattr(geom, "geoms") else [geom]
-        gx = "".join(f"<Point><coordinates>{p.x:.7f},{p.y:.7f},0</coordinates></Point>" if p.geom_type == "Point"
-                     else f"<LineString><tessellate>1</tessellate><coordinates>{_coords(p)}</coordinates></LineString>"
-                     for p in parts)
+        gx = "".join(_kml_geom(p) for p in parts)
         if len(parts) > 1:
             gx = f"<MultiGeometry>{gx}</MultiGeometry>"
         out.append(f"<Placemark><name>{_x(label)}</name><styleUrl>#{status}</styleUrl>"
