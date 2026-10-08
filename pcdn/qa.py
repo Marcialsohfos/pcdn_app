@@ -152,8 +152,10 @@ def run_layer_qa(gdf: gpd.GeoDataFrame, layer: str, domains: dict, dup_tol_m: fl
     dom = domains.get(layer, {})
     rows: list = []
     idf = spec.id_field
-    ids = gdf[idf].map(lambda v: None if is_null(v) else str(v).strip())
-    zones = gdf["zone"] if "zone" in gdf else pd.Series([None] * len(gdf), index=gdf.index)
+    # dtype=object obligatoire : avec pandas 3, Series.map(...) reconvertit None en NaN (float)
+    ids = pd.Series([None if is_null(v) else str(v).strip() for v in gdf[idf]], index=gdf.index, dtype="object")
+    zsrc = gdf["zone"] if "zone" in gdf else [None] * len(gdf)
+    zones = pd.Series([None if is_null(v) else str(v).strip() for v in zsrc], index=gdf.index, dtype="object")
 
     def add(i, field, rule, sev, msg, sugg=""):
         rows.append((layer, gdf["_rid"].iat[i] if i is not None else None,
@@ -212,9 +214,10 @@ def run_layer_qa(gdf: gpd.GeoDataFrame, layer: str, domains: dict, dup_tol_m: fl
     dup = ids.duplicated(keep=False) & ids.notna()
     for i in range(len(gdf)):
         v = ids.iat[i]
-        if v is None:
+        if v is None or pd.isna(v) or not str(v).strip():
             add(i, idf, "ID_MISSING", "ERROR", "Identifiant manquant")
             continue
+        v = str(v).strip()
         m = ID_RE.match(v)
         zexp = zones.iat[i]
         if not m:
