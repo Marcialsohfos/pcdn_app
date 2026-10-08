@@ -22,6 +22,33 @@ for k, v in {"srcs": None, "root": None, "raw": None, "struct": None, "issues_ra
              "rejected": {}, "issues_clean": None, "exports": {}, "log": [], "bundle": None, "ftp_cfg": None}.items():
     SS.setdefault(k, v)
 
+import warnings
+warnings.filterwarnings("ignore", message=r".*Measured \(M\) geometry.*")   # KML Mapit : M ignoré, sans gravité
+
+
+def _empty_issues() -> pd.DataFrame:
+    return pd.DataFrame({"layer": pd.Series(dtype="object"), "rule": pd.Series(dtype="object"),
+                         "severity": pd.Categorical([], ["ERROR", "WARNING", "INFO"]),
+                         "zone": pd.Series(dtype="object"), "_rid": pd.Series(dtype="float"),
+                         "message": pd.Series(dtype="object")})
+
+
+def run_qa(layers, domains, struct, tol):
+    """qa.run_all_qa ne doit jamais renvoyer None (aucune anomalie => tableau vide)."""
+    out = qa.run_all_qa(layers, domains, struct, tol)
+    return _empty_issues() if out is None else out
+
+
+def sanitize_ids(layers: dict) -> dict:
+    """ID vides/NaN -> None (objet) et valeurs -> str, pour éviter ID_RE.match(float)."""
+    for name, g in layers.items():
+        idf = LAYERS[name].id_field
+        if idf in g.columns:
+            vals = [None if pd.isna(v) or not str(v).strip() else str(v).strip() for v in g[idf]]
+            g[idf] = pd.Series(vals, index=g.index, dtype="object")
+    return layers
+
+
 
 def log(msg: str):
     SS.log.append(msg)
@@ -129,7 +156,8 @@ with tabs[0]:
                     if cl:
                         cl.close()
                     raw, struct = readers.ingest(resolved, log)
-                    issues_raw = qa.run_all_qa(raw, DOMAINS, struct, dup_tol)
+                    raw = sanitize_ids(raw)
+                    issues_raw = run_qa(raw, DOMAINS, struct, dup_tol)
                     SS.raw, SS.struct, SS.issues_raw = raw, struct, issues_raw   # affectés ensemble, seulement si tout a réussi
                     SS.clean = SS.issues_clean = SS.bundle = None
                     bar.empty()
@@ -149,10 +177,10 @@ def current():
     """Jeu de données courant : nettoyé si disponible, sinon brut."""
     if SS.clean is not None:
         if SS.issues_clean is None:
-            SS.issues_clean = qa.run_all_qa(SS.clean, DOMAINS, None, dup_tol)
+            SS.issues_clean = run_qa(SS.clean, DOMAINS, None, dup_tol)
         return SS.clean, SS.issues_clean, "pré-traité"
     if SS.issues_raw is None:   # filet de sécurité : recalcul si absent
-        SS.issues_raw = qa.run_all_qa(SS.raw, DOMAINS, SS.struct, dup_tol)
+        SS.issues_raw = run_qa(SS.raw, DOMAINS, SS.struct, dup_tol)
     return SS.raw, SS.issues_raw, "brut"
 
 
@@ -205,7 +233,7 @@ with tabs[2]:
     else:
         data, issues, label = current()
         if st.button("🔄 Relancer le contrôle qualité"):
-            issues = qa.run_all_qa(data, DOMAINS, SS.struct if label == "brut" else None, dup_tol)
+            issues = run_qa(data, DOMAINS, SS.struct if label == "brut" else None, dup_tol)
             if label == "brut":
                 SS.issues_raw = issues
             else:
@@ -277,7 +305,8 @@ with tabs[3]:
             SS.log = []
             with st.spinner("Traitement…"):
                 clean, rej = preprocess_all(SS.raw, DOMAINS, o, log)
-                SS.issues_clean = qa.run_all_qa(clean, DOMAINS, None, dup_tol)
+                clean = sanitize_ids(clean)
+                SS.issues_clean = run_qa(clean, DOMAINS, None, dup_tol)
                 clean = qa.apply_status(clean, SS.issues_clean)
                 if o.quarantine_errors:
                     clean, rej = quarantine(clean, rej)
