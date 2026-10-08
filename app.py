@@ -337,6 +337,12 @@ with tabs[4]:
                    "KML : tous les attributs en ExtendedData, couleur selon le statut QA.")
         if st.button("📦 Générer les exports", type="primary", disabled=not fmts):
             with st.spinner("Écriture des fichiers…"):
+                # colonnes en double (ex. lon/lat déjà présents dans le fichier source) : g[c] renverrait un DataFrame
+                dups = {n: sorted(set(g.columns[g.columns.duplicated()])) for n, g in SS.clean.items() if g.columns.duplicated().any()}
+                if dups:
+                    log(f"⚠ Colonnes en double supprimées avant export : {dups}")
+                    SS.clean = {n: g.loc[:, ~g.columns.duplicated()].copy() for n, g in SS.clean.items()}
+                    SS.rejected = {n: g.loc[:, ~g.columns.duplicated()].copy() for n, g in SS.rejected.items()}
                 summ = qa.summarize(SS.clean, SS.issues_clean)
                 SS.bundle = exporters.build_bundle(SS.clean, SS.rejected, SS.issues_clean, summ,
                                                    qa.completeness(SS.clean), SS.log, fmts)
