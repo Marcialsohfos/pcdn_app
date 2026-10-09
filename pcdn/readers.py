@@ -1,203 +1,149 @@
-"""Lecture SHP / KML / KMZ, alignement sur le schéma, fusion."""
+"""Lecture des .shp / .kml (et .zip contenant des .shp) -> GeoDataFrame WGS84, colonnes texte."""
 from __future__ import annotations
 
 import os
 import re
-import xml.etree.ElementTree as ET
 import zipfile
+from datetime import date, datetime
 from pathlib import Path
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
-from shapely.geometry import LineString, MultiLineString, MultiPoint, Point
+import shapely
+from lxml import etree
+from shapely.geometry import LineString, Point, Polygon
 
-from .config import CRS_OUT, LAYERS, META_COLS
-from .sources import Resolved
-from .utils import is_null
-
-os.environ.setdefault("SHAPE_RESTORE_SHX", "YES")
+from .util import norm_key
 
 
-# ------------------------------------------------------------------ KML
-def _ln(tag: str) -> str:
-    return tag.rsplit("}", 1)[-1]
-
-
-def _coords(text: str):
-    pts = []
-    for tok in (text or "").split():
-        p = tok.split(",")
-        if len(p) >= 2:
+def list_sources(settings: dict, log) -> pd.DataFrame:
+    """Décompresse les .zip non encore traités et renvoie les .shp/.kml à lire."""
+    d_ftp, d_work = Path(settings["dir_ftp"]), Path(settings["dir_work"])
+    for z in sorted(d_ftp.rglob("*.zip")):
+        target = d_work / "unzipped" / f"{norm_key(z.name)}_{z.stat().st_size}"
+        if not target.exists():
+            target.mkdir(parents=True)
             try:
-                pts.append((float(p[0]), float(p[1])))
-            except ValueError:
-                pass
-    return pts
+                with zipfile.ZipFile(z) as zf:
+                    zf.extractall(target)
+                    for info in zf.infolist():                       # restaure les dates d'origine (comme unzip en R)
+                        f = target / info.filename
+                        if f.exists() and not info.is_dir():
+                            ts = datetime(*info.date_time).timestamp()
+                            os.utime(f, (ts, ts))
+            except Exception as e:
+                log(f"ZIP illisible {z} : {e}", level="ERROR")
+    files = []
+    for root in (d_ftp, d_work / "unzipped"):
+        if root.exists():
+            files += [p for p in root.rglob("*") if p.suffix.lower() in (".shp", ".kml") and "__MACOSX" not in str(p)]
+    return pd.DataFrame({"path": files, "ext": [p.suffix.lower().lstrip(".") for p in files],
+                         "file_date": [pd.Timestamp(date.fromtimestamp(p.stat().st_mtime)) for p in files]})
 
 
-def _pm_geom(pm):
-    geoms = []
-    for el in pm.iter():
-        n = _ln(el.tag)
-        if n in ("Point", "LineString"):
-            ce = next((c for c in el.iter() if _ln(c.tag) == "coordinates"), None)
-            pts = _coords(ce.text) if ce is not None else []
-            if n == "Point" and pts:
-                geoms.append(Point(pts[0]))
-            elif n == "LineString" and len(pts) >= 2:
-                geoms.append(LineString(pts))
-    if not geoms:
+# ---- KML : lecture XML directe (robuste aux ExtendedData de Mapit) ---------------------
+def _coords(txt: str) -> list[tuple[float, float]]:
+    out = []
+    for t in re.sub(r"\s*,\s*", ",", txt.strip()).split():      # Mapit écrit parfois « lon, lat,alt » (espace après la virgule)
+        p = t.split(",")
+        out.append((float(p[0]), float(p[1])))
+    return out
+
+
+def _unquote(v):
+    """Mapit exporte certaines valeurs entre guillemets ("Bitume") : on retire les guillemets enveloppants."""
+    if isinstance(v, str):
+        t = v.strip()
+        if len(t) >= 2 and t[0] == t[-1] == '"':
+            return t[1:-1]
+    return v
+
+
+def read_kml(path: Path) -> gpd.GeoDataFrame | None:
+    root = etree.parse(str(path), etree.XMLParser(recover=True, huge_tree=True)).getroot()
+    for el in root.iter():
+        if isinstance(el.tag, str) and "}" in el.tag:
+            el.tag = el.tag.split("}", 1)[1]
+    pms = root.findall(".//Placemark")
+    if not pms:
         return None
-    if len(geoms) == 1:
-        return geoms[0]
-    if all(isinstance(g, Point) for g in geoms):
-        return MultiPoint(geoms)
-    return MultiLineString([g for g in geoms if isinstance(g, LineString)])
-
-
-def read_kml(path: str) -> gpd.GeoDataFrame:
-    p = Path(path)
-    if p.suffix.lower() == ".kmz":
-        with zipfile.ZipFile(p) as z:
-            name = next((n for n in z.namelist() if n.lower().endswith(".kml")), None)
-            if not name:
-                raise ValueError("KMZ sans fichier .kml")
-            data = z.read(name)
-    else:
-        data = p.read_bytes()
-    root = ET.fromstring(data)
     rows, geoms = [], []
-    for pm in (e for e in root.iter() if _ln(e.tag) == "Placemark"):
-        props = {}
-        for c in pm:
-            if _ln(c.tag) == "name":
-                props["name"] = (c.text or "").strip()
-        for el in pm.iter():
-            n = _ln(el.tag)
-            if n == "Data" and el.get("name"):
-                v = next((x for x in el if _ln(x.tag) == "value"), None)
-                props[el.get("name")] = v.text if v is not None else None
-            elif n == "SimpleData" and el.get("name"):
-                props[el.get("name")] = el.text
-        if len(props) <= 1:  # repli : tableau HTML dans <description>
-            d = next((c.text for c in pm if _ln(c.tag) == "description" and c.text), "")
-            for k, v in re.findall(r"<td[^>]*>(.*?)</td>\s*<td[^>]*>(.*?)</td>", d, re.S | re.I):
-                props[re.sub(r"<[^>]+>", "", k).strip()] = re.sub(r"<[^>]+>", "", v).strip()
-        rows.append(props)
-        geoms.append(_pm_geom(pm))
-    return gpd.GeoDataFrame(pd.DataFrame(rows), geometry=geoms, crs="EPSG:4326")
-
-
-# ------------------------------------------------------------------ SHP
-def read_shp(path: str) -> gpd.GeoDataFrame:
-    gdf = gpd.read_file(path, engine="pyogrio")
-    txt = gdf.select_dtypes(include="object")
-    if len(txt.columns) and txt.apply(lambda c: c.astype(str).str.contains("Ã|\ufffd", regex=True).any()).any():
+    for pm in pms:
+        att = {"placemark_name": _unquote(pm.findtext("name") or None)}
+        for d in pm.findall(".//ExtendedData//Data"):
+            k = d.get("name")
+            if k is not None:
+                att[k] = _unquote(d.findtext("value"))
+        for d in pm.findall(".//SimpleData"):
+            if d.get("name"):
+                att[d.get("name")] = d.text
+        g = None
         try:
-            gdf = gpd.read_file(path, engine="pyogrio", encoding="cp1252")
-        except Exception:  # noqa
-            pass
-    return gdf
+            pt, ln = pm.find(".//Point/coordinates"), pm.find(".//LineString/coordinates")
+            pg = pm.find(".//Polygon/outerBoundaryIs//coordinates")
+            if pt is not None:
+                g = Point(_coords(pt.text)[0])
+            elif ln is not None:
+                g = LineString(_coords(ln.text))
+            elif pg is not None:
+                g = Polygon(_coords(pg.text))
+        except Exception:
+            g = None
+        att["_multigeom"] = str(len(pm.xpath(".//Point|.//LineString|.//Polygon")) > 1)
+        rows.append(att)
+        geoms.append(g if g is not None else Point())          # géométrie vide si illisible
+    keys = list(dict.fromkeys(k for r in rows for k in r))
+    df = pd.DataFrame({k: pd.Series([r.get(k) for r in rows], dtype="object") for k in keys})
+    return gpd.GeoDataFrame(df, geometry=geoms, crs=4326)
 
 
-def read_any(r: Resolved) -> gpd.GeoDataFrame:
-    gdf = read_shp(r.local) if r.fmt == "shp" else read_kml(r.local)
-    if gdf.crs is None:
-        gdf = gdf.set_crs(CRS_OUT)
-    elif str(gdf.crs).upper() != CRS_OUT:
-        gdf = gdf.to_crs(CRS_OUT)
-    return gdf
+def _bad_utf8(df: pd.DataFrame) -> bool:
+    return any("\ufffd" in str(v) for c in df.columns if c != "geometry" for v in df[c].tolist() if isinstance(v, str))
 
 
-# ------------------------------------------------------------------ alignement
-def align_columns(gdf: gpd.GeoDataFrame, layer: str, fmt: str = "shp"):
-    """Renomme (casse, troncature shapefile à 10 car.), ajoute les manquantes, écarte les inconnues."""
-    spec = LAYERS[layer]
-    exp = [f.name for f in spec.fields]
-    cols = [c for c in gdf.columns if c != "geometry"]
-    lower = {c.lower(): c for c in cols}
-    rename, issues = {}, []
+def read_shp(path: Path) -> tuple[gpd.GeoDataFrame, bool]:
+    try:
+        x = gpd.read_file(path, engine="pyogrio", encoding="UTF-8")
+        bad = _bad_utf8(x)
+    except Exception:
+        x, bad = None, True
+    if bad:
+        x = gpd.read_file(path, engine="pyogrio", encoding="latin-1")
+    assumed = x.crs is None
+    x = x.set_crs(4326) if assumed else (x if x.crs.to_epsg() == 4326 else x.to_crs(4326))
+    return x, assumed
 
-    pending = []
-    for e in exp:
-        if e in cols:
-            continue
-        if e.lower() in lower:
-            rename[lower[e.lower()]] = e
+
+def _make_unique(names: list[str]) -> list[str]:
+    seen, out = {}, []
+    for n in names:
+        if n in seen:
+            seen[n] += 1
+            out.append(f"{n}.{seen[n]}")
         else:
-            pending.append(e)
-    used = set(rename) | set(exp)
-    cand: dict[str, list[str]] = {}
-    for e in pending:   # colonnes tronquées (≥ 8 car.) par le format shapefile
-        for c in cols:
-            if c not in used and len(c) >= 8 and e.lower().startswith(c.lower()):
-                cand.setdefault(c, []).append(e)
-    for c, es in cand.items():
-        if len(es) == 1:
-            rename[c] = es[0]
+            seen[n] = 0
+            out.append(n)
+    return out
+
+
+def read_source(path: Path, file_date) -> tuple[gpd.GeoDataFrame, bool] | None:
+    """-> (GeoDataFrame texte + _source + _file_date, crs_assumed) ou None."""
+    try:
+        if path.suffix.lower() == ".kml":
+            x, assumed = read_kml(path), False
         else:
-            issues.append(("STRUCT_AMBIGUOUS", "WARNING", c,
-                           f"Colonne tronquée '{c}' ambiguë entre {es} — non mappée (exporter en KML ou renommer)."))
-    for old, new in rename.items():
-        if old.lower() != new.lower() or old != new:
-            issues.append(("STRUCT_RENAMED", "INFO", new, f"Colonne '{old}' reconnue comme '{new}'."))
-    gdf = gdf.rename(columns=rename)
-
-    idf = spec.id_field
-    if (idf not in gdf.columns or gdf[idf].map(is_null).all()) and "name" in gdf.columns:
-        gdf[idf] = gdf["name"]
-        issues.append(("STRUCT_ID_FROM_NAME", "INFO", idf, "Identifiant repris du <name> KML."))
-    for e in exp:
-        if e not in gdf.columns:
-            gdf[e] = None
-            # un KML n'exporte pas les champs vides : colonne absente = simple information
-            issues.append(("STRUCT_MISSING_COL", "INFO" if fmt in ("kml", "kmz") else "ERROR", e,
-                           f"Colonne attendue absente: '{e}'."))
-    extra = [c for c in gdf.columns if c not in exp and c != "geometry" and c not in META_COLS]
-    if extra:
-        issues.append(("STRUCT_EXTRA_COL", "INFO", ", ".join(extra[:8]),
-                       f"{len(extra)} colonne(s) hors schéma ignorée(s): {', '.join(extra[:8])}"))
-    return gdf[exp + ["geometry"]], issues
-
-
-def ingest(resolved: list[Resolved], log) -> tuple[dict, pd.DataFrame]:
-    """-> ({couche: GeoDataFrame fusionné}, issues structurelles)."""
-    groups: dict = {}
-    for r in resolved:
-        if not r.layer:
-            log(f"⚠ Ignoré (couche non identifiée): {r.origin}")
-            continue
-        groups.setdefault((r.layer, r.zone), []).append(r)
-
-    frames: dict[str, list] = {}
-    struct = []
-    for (layer, zone), rs in sorted(groups.items(), key=lambda x: (x[0][0], str(x[0][1]))):
-        rs = sorted(rs, key=lambda r: r.fmt != "shp")  # SHP prioritaire, KML en secours
-        gdf, used = None, None
-        for r in rs:
-            try:
-                gdf = read_any(r)
-                used = r
-                break
-            except Exception as e:  # noqa
-                log(f"⚠ Lecture impossible {r.origin} ({r.fmt}): {e}")
-        if gdf is None:
-            struct.append((layer, zone, "STRUCT_UNREADABLE", "ERROR", "", f"Aucune source lisible pour {layer}/{zone}"))
-            continue
-        if len(rs) > 1:
-            log(f"ℹ {layer}/{zone}: {len(rs)} formats trouvés, {used.fmt.upper()} retenu.")
-        gdf, iss = align_columns(gdf, layer, used.fmt)
-        struct += [(layer, zone, c, s, f, m) for c, s, f, m in iss]
-        gdf["zone"] = zone
-        gdf["source_file"] = Path(used.origin.split("!")[-1]).name
-        gdf["source_fmt"] = used.fmt
-        frames.setdefault(layer, []).append(gdf)
-        log(f"✔ {layer} / {zone or 'zone ?'} : {len(gdf)} entités ({used.fmt.upper()})")
-
-    merged = {}
-    for layer, fl in frames.items():
-        m = gpd.GeoDataFrame(pd.concat(fl, ignore_index=True), geometry="geometry", crs=CRS_OUT)
-        m["_rid"] = range(len(m))
-        merged[layer] = m
-    sdf = pd.DataFrame(struct, columns=["layer", "zone", "rule", "severity", "field", "message"])
-    return merged, sdf
+            x, assumed = read_shp(path)
+    except Exception as e:
+        raise RuntimeError(f"Lecture impossible {path.name} : {e}")
+    if x is None or len(x) == 0:
+        return None
+    geom = x.geometry.name
+    g = shapely.force_2d(np.array(x.geometry.values))
+    d = x.drop(columns=[geom])
+    d.columns = _make_unique(d.columns.tolist())               # shapefile : noms tronqués identiques -> nom, nom.1 (comme R)
+    d = pd.DataFrame({c: pd.Series([None if (v is None or (isinstance(v, float) and np.isnan(v)) or v is pd.NA or v is pd.NaT)
+                                    else str(v) for v in d[c].tolist()], dtype="object") for c in d.columns})
+    d["_source"] = path.name
+    d["_file_date"] = file_date
+    return gpd.GeoDataFrame(d, geometry=g, crs=4326), assumed
