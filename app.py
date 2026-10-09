@@ -1,368 +1,222 @@
-"""PCDN Corridor — Collecte, fusion, assurance qualité, pré-traitement et export des couches terrain."""
+"""PCDN – monitoring des données géospatiales (Streamlit).
+Même logique que le pipeline R : FTP -> lecture .shp/.kml/.zip -> reconnaissance des couches -> contrôle qualité
+-> consolidation -> exports (GPKG, Excel, QA, corrections par agent, suivi quotidien).
+Lancer :  streamlit run app.py
+"""
 from __future__ import annotations
 
-import tempfile
-import uuid
-from dataclasses import asdict
-from pathlib import Path
+import io
+from datetime import date
 
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
-from pcdn import exporters, qa, readers
-from pcdn.config import LAYERS, check_spec, load_domains
-from pcdn.preprocess import PreOpts, preprocess_all, quarantine
-from pcdn.sources import FtpClient, SrcFile, build_sources, fetch
+from pcdn import ftp
+from pcdn.exporters import _write_sheets, export_all, summarise_quality, zip_latest
+from pcdn.pipeline import run_pipeline
+from pcdn.settings import get_settings, load_schema
+from pcdn.util import Logger
 
-st.set_page_config(page_title="PCDN · Pipeline cartographique", page_icon="🚆", layout="wide")
-DOMAINS = load_domains()
+st.set_page_config(page_title="PCDN – Monitoring", page_icon="🚉", layout="wide")
+S, SCHEMA = get_settings(), None
+
+
+@st.cache_data
+def _schema():
+    return load_schema(S["config_dir"])
+
+
+SCHEMA = _schema()
 SS = st.session_state
-for k, v in {"srcs": None, "root": None, "raw": None, "struct": None, "issues_raw": None, "clean": None,
-             "rejected": {}, "issues_clean": None, "exports": {}, "log": [], "bundle": None, "ftp_cfg": None}.items():
+for k, v in {"res": None, "log": [], "exported": False}.items():
     SS.setdefault(k, v)
 
-import warnings
-warnings.filterwarnings("ignore", message=r".*Measured \(M\) geometry.*")   # KML Mapit : M ignoré, sans gravité
+
+def local_files() -> pd.DataFrame:
+    f = [p for p in S["dir_ftp"].rglob("*") if p.is_file() and p.suffix.lower() in (".shp", ".kml", ".zip")] if S["dir_ftp"].exists() else []
+    return pd.DataFrame({"fichier": [str(p.relative_to(S["dir_ftp"])) for p in f],
+                         "taille_ko": [round(p.stat().st_size / 1024, 1) for p in f],
+                         "modifié": [pd.Timestamp(p.stat().st_mtime, unit="s").strftime("%Y-%m-%d %H:%M") for p in f]}).sort_values("modifié", ascending=False)
 
 
-def _empty_issues() -> pd.DataFrame:
-    return pd.DataFrame({"layer": pd.Series(dtype="object"), "rule": pd.Series(dtype="object"),
-                         "severity": pd.Categorical([], ["ERROR", "WARNING", "INFO"]),
-                         "zone": pd.Series(dtype="object"), "_rid": pd.Series(dtype="float"),
-                         "message": pd.Series(dtype="object")})
+def run(with_ftp: bool):
+    log = Logger(S["dir_logs"] / f"run_{date.today():%Y%m%d}.log")
+    bar = st.progress(0.0, text="Démarrage…")
+    log("===== Démarrage du monitoring PCDN =====")
+    if with_ftp:
+        try:
+            bar.progress(0.05, text="Synchronisation FTP…")
+            ftp.sync(S, log, progress=lambda p: bar.progress(0.05 + 0.2 * p, text="Téléchargement FTP…"))
+        except Exception as e:
+            log(f"FTP indisponible : {e} -> traitement des fichiers déjà présents", level="ERROR")
+            st.warning(f"FTP indisponible : {e}. Traitement des fichiers déjà présents.")
+    res = run_pipeline(S, SCHEMA, log, progress=lambda p: bar.progress(0.25 + 0.75 * p, text="Lecture et contrôle…"))
+    bar.empty()
+    SS.res, SS.log, SS.exported = res, log.lines, False
+    if not res["data"]:
+        st.error("Aucune donnée exploitable trouvée. Vérifiez l'onglet « Collecte ».")
 
 
-def run_qa(layers, domains, struct, tol):
-    """qa.run_all_qa ne doit jamais renvoyer None (aucune anomalie => tableau vide)."""
-    out = qa.run_all_qa(layers, domains, struct, tol)
-    return _empty_issues() if out is None else out
+# ------------------------------------------------------------------------------------------------
+st.title("🚉 PCDN – Monitoring des données de terrain")
+tabs = st.tabs(["1 · Collecte", "2 · Traitement", "3 · Tableau de bord", "4 · Anomalies", "5 · Données & carte", "6 · Export"])
 
-
-def sanitize_ids(layers: dict) -> dict:
-    """ID vides/NaN -> None (objet) et valeurs -> str, pour éviter ID_RE.match(float)."""
-    for name, g in layers.items():
-        idf = LAYERS[name].id_field
-        if idf in g.columns:
-            vals = [None if pd.isna(v) or not str(v).strip() else str(v).strip() for v in g[idf]]
-            g[idf] = pd.Series(vals, index=g.index, dtype="object")
-    return layers
-
-
-
-def log(msg: str):
-    SS.log.append(msg)
-
-
-def secret(key, default=""):
-    try:
-        return st.secrets["ftp"].get(key, default)
-    except Exception:  # noqa
-        return default
-
-
-# ================================================================== SIDEBAR
-with st.sidebar:
-    st.title("🚆 PCDN Corridor")
-    st.caption("Pipeline : FTP → fusion → QA → pré-traitement → export")
-    probs = check_spec(DOMAINS)
-    if probs:
-        st.error("Dictionnaires JSON incohérents :\n\n" + "\n".join(f"- {p}" for p in probs[:6]))
-    dup_tol = st.number_input("Seuil de doublon de points (m)", 0.5, 100.0, 3.0, 0.5)
-    st.divider()
-    st.markdown("**Convention d'ID** : `ZONE<n>` + 2 premières lettres de la couche + n°")
-    st.dataframe(pd.DataFrame({"Couche": list(LAYERS), "Préfixe": [l.prefix for l in LAYERS.values()],
-                               "Exemple": [f"ZONE1{l.prefix}1" for l in LAYERS.values()]}),
-                 hide_index=True, width="stretch")
-    if st.button("♻ Réinitialiser la session"):
-        st.session_state.clear()
-        st.rerun()
-
-tabs = st.tabs(["1 · Source", "2 · Fusion", "3 · Qualité", "4 · Pré-traitement", "5 · Export"])
-
-
-# ================================================================== 1. SOURCE
+# ---- 1. Collecte ---------------------------------------------------------------------------------
 with tabs[0]:
-    mode = st.radio("Origine des données", ["Serveur FTP", "Téléversement manuel (secours)"], horizontal=True)
-    workdir = Path(tempfile.gettempdir()) / "pcdn_work"
-    ftp = None
-
-    if mode == "Serveur FTP":
-        c1, c2, c3, c4 = st.columns([3, 1, 2, 2])
-        host = c1.text_input("Hôte", secret("host"))
-        port = c2.number_input("Port", 1, 65535, int(secret("port", 21)))
-        user = c3.text_input("Utilisateur", secret("user"))
-        pwd = c4.text_input("Mot de passe", secret("password"), type="password")
-        c5, c6, c7, c8 = st.columns([3, 1, 2, 2])
-        root = c5.text_input("Dossier racine", secret("root", "/"))
-        depth = c6.number_input("Profondeur", 1, 10, 5)
-        tls = c7.checkbox("Utiliser FTPS (chiffré)", True)
-        plain = c8.checkbox("Autoriser repli FTP non chiffré", False,
-                            help="À éviter : identifiants et données circulent en clair.")
-        if not secret("host"):
-            st.info("Astuce : placez les identifiants dans `.streamlit/secrets.toml` (voir `secrets.toml.example`) "
-                    "plutôt que de les saisir ou de les écrire dans le code.")
-        if st.button("🔎 Scanner le serveur", type="primary", disabled=not (host and user)):
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("Serveur FTP")
+        st.caption("Identifiants lus dans `PCDN_FTP_HOST`, `PCDN_FTP_USER`, `PCDN_FTP_PWD` (variables d'environnement ou `.streamlit/secrets.toml`).")
+        configured = all(ftp.env(k) for k in ("PCDN_FTP_HOST", "PCDN_FTP_USER", "PCDN_FTP_PWD"))
+        st.write("Configuration FTP :", "✅ renseignée" if configured else "❌ incomplète")
+        if st.button("⬇️ Télécharger les nouveaux fichiers", disabled=not configured):
+            log = Logger(S["dir_logs"] / f"run_{date.today():%Y%m%d}.log")
+            bar = st.progress(0.0)
             try:
-                with st.spinner("Connexion et exploration…"), FtpClient(host, user, pwd, port, tls, plain) as cl:
-                    entries = cl.walk(root, depth)
-                    SS.ftp_cfg = dict(host=host, user=user, pwd=pwd, port=port, tls=tls, allow_plain=plain)
-                    st.success(f"Connecté ({cl.mode}) — {len(entries)} fichiers vus.")
-                SS.srcs, SS.root = build_sources(entries), None
-            except Exception as e:  # noqa
-                st.error(f"Échec : {e}")
-    else:
-        ups = st.file_uploader("Shapefiles (.shp + .shx + .dbf + .prj + .cpg), KML, KMZ ou ZIP", accept_multiple_files=True,
-                               type=["shp", "shx", "dbf", "prj", "cpg", "kml", "kmz", "zip"])
-        if st.button("📂 Analyser les fichiers", type="primary", disabled=not ups):
-            root = workdir / f"up_{uuid.uuid4().hex[:8]}"
-            root.mkdir(parents=True, exist_ok=True)
-            entries = []
-            for u in ups:
-                (root / u.name).write_bytes(u.getbuffer())
-                entries.append((u.name, u.size))
-            SS.srcs, SS.root, SS.ftp_cfg = build_sources(entries), root, None
+                n = ftp.sync(S, log, progress=bar.progress)
+                st.success(f"{n} fichier(s) nouveau(x) ou modifié(s) téléchargé(s).")
+            except Exception as e:
+                st.error(f"FTP : {e}")
+            bar.empty()
+    with c2:
+        st.subheader("Ou déposer des fichiers")
+        up = st.file_uploader("Fichiers .kml, .zip (shapefile) ou .shp + .shx/.dbf/.prj/.cpg", accept_multiple_files=True,
+                              type=["kml", "zip", "shp", "shx", "dbf", "prj", "cpg"])
+        if up and st.button("📥 Enregistrer les fichiers déposés"):
+            d = S["dir_ftp"] / "depots"
+            d.mkdir(parents=True, exist_ok=True)
+            for f in up:
+                (d / f.name).write_bytes(f.getbuffer())
+            st.success(f"{len(up)} fichier(s) enregistré(s).")
+    st.subheader("Fichiers disponibles localement")
+    lf = local_files()
+    st.caption(f"{len(lf)} fichier(s) .shp / .kml / .zip")
+    st.dataframe(lf, width="stretch", hide_index=True)
 
-    if SS.srcs is not None:
-        st.subheader("Fichiers détectés")
-        st.caption("Vérifiez / corrigez la couche et la zone détectées (depuis le nom ou le chemin), décochez ce qui est à ignorer.")
-        df = pd.DataFrame([{"inclure": s.include, "couche": s.layer, "zone": s.zone, "format": s.fmt,
-                            "taille_ko": round(s.size / 1024, 1), "chemin": s.path} for s in SS.srcs])
-        if df.empty:
-            st.warning("Aucun fichier .shp / .kml / .kmz / .zip trouvé.")
-        else:
-            ed = st.data_editor(
-                df, hide_index=True, width="stretch", disabled=["format", "taille_ko", "chemin"],
-                column_config={"couche": st.column_config.SelectboxColumn(options=list(LAYERS)),
-                               "zone": st.column_config.TextColumn(help="Ex. ZONE1")})
-            miss = ed[ed.inclure & (ed.couche.isna() | ed.zone.isna() | (ed.zone == ""))]
-            if len(miss):
-                st.warning(f"{len(miss)} fichier(s) sans couche ou zone : la zone sera déduite des ID si possible.")
-            if st.button("⬇ Récupérer et lire les données", type="primary"):
-                for s, (_, r) in zip(SS.srcs, ed.iterrows()):
-                    s.include, s.layer = bool(r.inclure), r.couche or None
-                    s.zone = (str(r.zone).upper().replace(" ", "") if r.zone else None)
-                SS.log = []
-                resolved, bar = [], st.progress(0.0, "Téléchargement…")
-                todo = [s for s in SS.srcs if s.include and s.layer]
-                try:
-                    cl = FtpClient(**{**SS.ftp_cfg, "pwd": SS.ftp_cfg["pwd"]}).connect() if SS.ftp_cfg else None
-                    for i, s in enumerate(todo, 1):
-                        bar.progress(i / max(len(todo), 1), f"{s.path}")
-                        try:
-                            resolved += fetch(s, workdir / "dl", cl, SS.root)
-                        except Exception as e:  # noqa
-                            log(f"❌ {s.path}: {e}")
-                    if cl:
-                        cl.close()
-                    raw, struct = readers.ingest(resolved, log)
-                    raw = sanitize_ids(raw)
-                    issues_raw = run_qa(raw, DOMAINS, struct, dup_tol)
-                    SS.raw, SS.struct, SS.issues_raw = raw, struct, issues_raw   # affectés ensemble, seulement si tout a réussi
-                    SS.clean = SS.issues_clean = SS.bundle = None
-                    bar.empty()
-                    st.success(f"{sum(len(g) for g in SS.raw.values())} entités lues dans {len(SS.raw)} couche(s). "
-                               "Passez à l'onglet « Fusion ».")
-                except Exception as e:  # noqa
-                    bar.empty()
-                    st.error(f"Erreur : {e}")
-                    st.exception(e)
-    if SS.log:
-        with st.expander("Journal", expanded=False):
+# ---- 2. Traitement ---------------------------------------------------------------------------------
+with tabs[1]:
+    st.write("Lecture → reconnaissance de la couche → harmonisation → contrôles → consolidation.")
+    cc1, cc2 = st.columns(2)
+    if cc1.button("▶️ Traiter les fichiers présents", type="primary"):
+        run(with_ftp=False)
+    if cc2.button("🔄 FTP + traitement"):
+        run(with_ftp=True)
+    if SS.res:
+        st.subheader("Journal des fichiers")
+        fl = SS.res["file_log"]
+        st.dataframe(fl, width="stretch", hide_index=True)
+        if (fl["statut"] == "NON RECONNU").any():
+            st.warning("Certains fichiers n'ont pas été rattachés à une couche (nom de fichier ou colonnes inattendus).")
+        with st.expander("Journal d'exécution"):
             st.code("\n".join(SS.log))
 
-
-# ================================================================== helpers
-def current():
-    """Jeu de données courant : nettoyé si disponible, sinon brut."""
-    if SS.clean is not None:
-        if SS.issues_clean is None:
-            SS.issues_clean = run_qa(SS.clean, DOMAINS, None, dup_tol)
-        return SS.clean, SS.issues_clean, "pré-traité"
-    if SS.issues_raw is None:   # filet de sécurité : recalcul si absent
-        SS.issues_raw = run_qa(SS.raw, DOMAINS, SS.struct, dup_tol)
-    return SS.raw, SS.issues_raw, "brut"
-
-
-def show_map(layers: dict, key: str):
-    name = st.selectbox("Couche à afficher", list(layers), key=key)
-    g = layers[name]
-    g = g[g.geometry.notna() & ~g.geometry.is_empty].copy()
-    if g.empty:
-        st.info("Aucune géométrie.")
-        return
-    col = {"OK": [60, 180, 90, 200], "WARNING": [245, 155, 30, 220], "ERROR": [220, 60, 60, 230]}
-    status = g["qa_status"] if "qa_status" in g else pd.Series("OK", index=g.index)
-    g["color"] = status.map(col).map(lambda c: c or [120, 120, 120, 200])
-    keep = [LAYERS[name].id_field, "zone", "color", "geometry"] + (["qa_status"] if "qa_status" in g else [])
-    layer = pdk.Layer("GeoJsonLayer", data=g[keep].__geo_interface__, get_fill_color="properties.color",
-                      get_line_color="properties.color", point_radius_min_pixels=6, line_width_min_pixels=3, pickable=True)
-    xmin, ymin, xmax, ymax = g.total_bounds
-    view = pdk.ViewState(latitude=(ymin + ymax) / 2, longitude=(xmin + xmax) / 2, zoom=6.5 if xmax - xmin > 1 else 10)
-    st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view, map_style=None,
-                             tooltip={"text": "{" + LAYERS[name].id_field + "}\n{zone}"}))
-
-
-# ================================================================== 2. FUSION
-with tabs[1]:
-    if SS.raw is None:
-        st.info("Récupérez d'abord les données (onglet 1).")
-    else:
-        data, _, label = current()
-        st.subheader(f"Couches fusionnées ({label})")
-        zones = sorted({z for g in data.values() for z in g["zone"].dropna().unique()})
-        cov = pd.DataFrame({z: {n: int((g["zone"] == z).sum()) for n, g in data.items()} for z in zones})
-        cov.insert(0, "Total", [len(g) for g in data.values()])
-        exp = st.text_input("Zones attendues (facultatif, ex. ZONE1,ZONE2,ZONE3,ZONE4)", "")
-        for z in [x.strip().upper() for x in exp.split(",") if x.strip()]:
-            if z not in cov:
-                cov[z] = 0
-        st.caption("Matrice de couverture couche × zone — les 0 signalent des levés manquants.")
-        st.dataframe(cov.style.map(lambda v: "background-color:#fde2e2" if v == 0 else "", subset=[c for c in cov if c != "Total"]),
-                     width="stretch")
-        missing_layers = [n for n in LAYERS if n not in data]
-        if missing_layers:
-            st.warning("Couches non reçues : " + ", ".join(missing_layers))
-        show_map(data, "map_fusion")
-
-
-# ================================================================== 3. QUALITÉ
+# ---- 3. Tableau de bord --------------------------------------------------------------------------------
 with tabs[2]:
-    if SS.raw is None:
-        st.info("Récupérez d'abord les données (onglet 1).")
+    if not SS.res or not SS.res["data"]:
+        st.info("Lancez le traitement (onglet 2) pour voir les résultats.")
     else:
-        data, issues, label = current()
-        if st.button("🔄 Relancer le contrôle qualité"):
-            issues = run_qa(data, DOMAINS, SS.struct if label == "brut" else None, dup_tol)
-            if label == "brut":
-                SS.issues_raw = issues
-            else:
-                SS.issues_clean = issues
-            st.rerun()
-        st.subheader(f"Assurance qualité — jeu {label}")
-        summ = qa.summarize(data, issues)
-        tot = int(summ["Entités"].sum())
-        nerr = int(summ["Erreurs (entités)"].sum())
-        nwar = int(summ["Avertissements seuls (entités)"].sum())
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Entités", tot)
-        m2.metric("En erreur", nerr)
-        m3.metric("Avertissements seuls", nwar)
-        m4.metric("Conformes", f"{100 * (tot - nerr - nwar) / tot:.1f} %" if tot else "—")
-        st.dataframe(summ, hide_index=True, width="stretch")
+        res = SS.res
+        q, iss = summarise_quality(res), res["issues_all"]
+        tot = int(q["entites"].sum())
+        nerr, nwar = int((iss.severity == "error").sum()), int((iss.severity == "warning").sum())
+        n_bad = int(q["entites_avec_erreur"].sum())
+        k = st.columns(5)
+        k[0].metric("Entités consolidées", tot)
+        k[1].metric("Erreurs", nerr)
+        k[2].metric("Avertissements", nwar)
+        k[3].metric("Entités conformes", f"{100 * (1 - n_bad / max(tot, 1)):.1f} %")
+        k[4].metric("Couches renseignées", f"{len(res['data'])}/{len(SCHEMA['layers'])}")
+        st.subheader("Synthèse par couche")
+        st.dataframe(q, width="stretch", hide_index=True)
+        missing = sorted(set(SCHEMA["layers"]["layer"]) - set(res["data"]))
+        if missing:
+            st.warning("Couches sans aucune donnée : " + ", ".join(missing))
+        a, b = st.columns(2)
+        with a:
+            st.subheader("Anomalies par type")
+            if len(iss):
+                st.bar_chart(iss.groupby("type").size().sort_values(ascending=False), horizontal=True)
+        with b:
+            st.subheader("Anomalies par agent")
+            if len(iss):
+                st.bar_chart(iss.groupby("agent").size().sort_values(ascending=False))
+        hp = S["dir_output"] / "suivi_quotidien.csv"
+        if hp.exists():
+            h = pd.read_csv(hp)
+            st.subheader("Suivi quotidien")
+            st.line_chart(h.pivot_table(index="date_execution", columns="couche", values="entites", aggfunc="sum"))
+            with st.expander("Historique (taux de conformité, erreurs)"):
+                st.dataframe(h, width="stretch", hide_index=True)
 
-        st.markdown("#### Explorateur d'anomalies")
-        f1, f2, f3, f4 = st.columns(4)
-        sel_l = f1.multiselect("Couche", sorted(issues.layer.unique()))
-        sel_s = f2.multiselect("Sévérité", ["ERROR", "WARNING", "INFO"], ["ERROR", "WARNING"])
-        sel_r = f3.multiselect("Règle", sorted(issues.rule.unique()))
-        sel_z = f4.multiselect("Zone", sorted(issues.zone.dropna().unique()))
-        v = issues.copy()
-        if sel_l:
-            v = v[v.layer.isin(sel_l)]
-        if sel_s:
-            v = v[v.severity.isin(sel_s)]
-        if sel_r:
-            v = v[v.rule.isin(sel_r)]
-        if sel_z:
-            v = v[v.zone.isin(sel_z)]
-        st.caption(f"{len(v)} anomalie(s) affichée(s)")
-        st.dataframe(v.drop(columns="_rid").assign(severity=v.severity.astype(str)), hide_index=True, width="stretch")
-        c1, c2 = st.columns(2)
-        c1.download_button("⬇ Anomalies (CSV)", v.assign(severity=v.severity.astype(str)).to_csv(index=False, encoding="utf-8-sig"),
-                           "anomalies_QA.csv", "text/csv")
-        top = issues[issues.severity != "INFO"].groupby("rule").size().sort_values(ascending=False).head(15)
-        if len(top):
-            c2.bar_chart(top, horizontal=True)
-        with st.expander("Complétude des champs (% renseignés)"):
-            comp = qa.completeness(data)
-            st.dataframe(comp.pivot(index="Champ", columns="Couche", values="Renseigné (%)").dropna(how="all"),
-                         width="stretch")
-
-
-# ================================================================== 4. PRÉ-TRAITEMENT
+# ---- 4. Anomalies ---------------------------------------------------------------------------------------
 with tabs[3]:
-    if SS.raw is None:
-        st.info("Récupérez d'abord les données (onglet 1).")
+    if not SS.res or not len(SS.res["issues_all"]):
+        st.info("Aucune anomalie à afficher.")
     else:
-        st.subheader("Options de pré-traitement")
-        c1, c2, c3 = st.columns(3)
-        o = PreOpts(
-            clean_text=c1.checkbox("Nettoyer les textes (espaces, vides, caractères parasites)", True),
-            fix_geometry=c1.checkbox("Réparer les géométries (2D, make_valid, multi→simple)", True),
-            fix_swapped_xy=c1.checkbox("Corriger lon/lat inversés", True),
-            drop_empty_geom=c1.checkbox("Écarter les entités sans géométrie", True),
-            coerce_types=c2.checkbox("Typer booléens / nombres", True),
-            fix_domains=c2.checkbox("Normaliser selon les dictionnaires (casse, accents, tirets)", True),
-            fuzzy_cutoff=c2.slider("Tolérance fautes de frappe (0 = off)", 0.0, 1.0, 0.88, 0.01),
-            drop_exact_dupes=c3.checkbox("Supprimer les doublons stricts", True),
-            harmonize_ids=c3.checkbox("Harmoniser les ID (ZONE<n>XX<n>)", True),
-            add_coords=c3.checkbox("Ajouter lon/lat (points) ou longueur_m (lignes)", True),
-            quarantine_errors=c3.checkbox("Mettre en quarantaine les entités encore en ERREUR", False,
-                                          help="Elles sont retirées des exports principaux et conservées dans « rejets »."),
-        )
-        if st.button("⚙ Lancer le pré-traitement", type="primary"):
-            SS.log = []
-            with st.spinner("Traitement…"):
-                clean, rej = preprocess_all(SS.raw, DOMAINS, o, log)
-                clean = sanitize_ids(clean)
-                SS.issues_clean = run_qa(clean, DOMAINS, None, dup_tol)
-                clean = qa.apply_status(clean, SS.issues_clean)
-                if o.quarantine_errors:
-                    clean, rej = quarantine(clean, rej)
-                SS.clean, SS.rejected, SS.bundle = clean, rej, None
-            st.success("Pré-traitement terminé — le jeu pré-traité est désormais celui utilisé dans les onglets Qualité et Export.")
-        if SS.clean is not None:
-            b, a = qa.summarize(SS.raw, SS.issues_raw), qa.summarize(SS.clean, SS.issues_clean)
-            cmp_ = b.merge(a, on="Couche", how="outer", suffixes=(" avant", " après"))
-            st.markdown("#### Avant / après")
-            st.dataframe(cmp_[["Couche", "Entités avant", "Entités après", "Erreurs (entités) avant", "Erreurs (entités) après",
-                               "Entités OK (%) avant", "Entités OK (%) après"]], hide_index=True, width="stretch")
-            if SS.rejected:
-                with st.expander(f"Rejets ({sum(len(r) for r in SS.rejected.values())})"):
-                    for n, r in SS.rejected.items():
-                        st.write(f"**{n}**")
-                        st.dataframe(r.drop(columns=["geometry", "_rid"], errors="ignore"), width="stretch")
-        with st.expander("Journal de traitement"):
-            st.code("\n".join(SS.log) or "—")
+        iss = SS.res["issues_all"]
+        f1, f2, f3, f4 = st.columns(4)
+        lay = f1.multiselect("Couche", sorted(iss["layer"].unique()))
+        sev = f2.multiselect("Gravité", ["error", "warning"], default=["error", "warning"])
+        typ = f3.multiselect("Type", sorted(iss["type"].unique()))
+        ag = f4.multiselect("Agent", sorted(iss["agent"].dropna().unique()))
+        v = iss[iss["severity"].isin(sev)]
+        for col, sel in (("layer", lay), ("type", typ), ("agent", ag)):
+            if sel:
+                v = v[v[col].isin(sel)]
+        st.caption(f"{len(v)} anomalie(s)")
+        st.dataframe(v, width="stretch", hide_index=True, height=480)
+        d1, d2 = st.columns(2)
+        d1.download_button("⬇️ Anomalies filtrées (CSV)", v.to_csv(index=False, encoding="utf-8-sig"), "anomalies.csv", "text/csv")
+        who = d2.selectbox("Classeur de corrections pour l'agent", sorted(iss["agent"].dropna().unique()))
+        if who:
+            buf = io.BytesIO()
+            tmp = S["dir_work"] / "_agent.xlsx"
+            tmp.parent.mkdir(parents=True, exist_ok=True)
+            _write_sheets(tmp, {"Corrections": iss[iss["agent"] == who]})
+            d2.download_button(f"⬇️ Corrections – {who}", tmp.read_bytes(), f"corrections_{who}.xlsx")
 
-
-# ================================================================== 5. EXPORT
+# ---- 5. Données & carte ------------------------------------------------------------------------------------
 with tabs[4]:
-    if SS.clean is None:
-        st.info("Lancez d'abord le pré-traitement (onglet 4) : l'export porte sur le jeu pré-traité, avec statut QA.")
+    if not SS.res or not SS.res["data"]:
+        st.info("Lancez le traitement (onglet 2).")
     else:
-        fmts = st.multiselect("Formats", ["GeoPackage", "Shapefile", "KML"], ["GeoPackage", "Shapefile", "KML"])
-        st.caption("Shapefile : noms de champs limités à 10 caractères → table de correspondance fournie. "
-                   "KML : tous les attributs en ExtendedData, couleur selon le statut QA.")
-        if st.button("📦 Générer les exports", type="primary", disabled=not fmts):
+        name = st.selectbox("Couche", list(SS.res["data"]))
+        g = SS.res["data"][name]
+        shown = g[[c for c in g.columns if not c.startswith("x_") and c != "_multigeom"]]
+        st.dataframe(pd.DataFrame(shown.drop(columns="geometry")), width="stretch", hide_index=True, height=300)
+        g = g[~(g.geometry.isna() | g.geometry.is_empty)]
+        if len(g):
+            col = [[220, 60, 60, 200] if e > 0 else ([245, 155, 30, 200] if w > 0 else [60, 180, 90, 200])
+                   for e, w in zip(g["_n_err"], g["_n_warn"])]
+            lid = SCHEMA["layers"].set_index("layer").loc[name, "id_var"]
+            base = pd.DataFrame({"id": g[lid].fillna("(sans id)").to_numpy(), "color": col, "agent": g["_agent"].to_numpy()})
+            if g.geometry.iloc[0].geom_type.endswith("Point"):
+                base["lon"], base["lat"] = g.geometry.x.to_numpy(), g.geometry.y.to_numpy()
+                layer = pdk.Layer("ScatterplotLayer", base, get_position="[lon, lat]", get_fill_color="color", get_radius=6,
+                                  radius_units="pixels", pickable=True)
+            else:
+                base["path"] = [list(map(list, (gm.geoms[0] if hasattr(gm, "geoms") else gm).coords)) for gm in g.geometry]
+                layer = pdk.Layer("PathLayer", base, get_path="path", get_color="color", get_width=4, width_units="pixels", pickable=True)
+            minx, miny, maxx, maxy = g.total_bounds
+            st.pydeck_chart(pdk.Deck(layers=[layer], tooltip={"text": "{id}\n{agent}"},
+                                     initial_view_state=pdk.ViewState(longitude=(minx + maxx) / 2, latitude=(miny + maxy) / 2,
+                                                                      zoom=7 if (maxx - minx) > 0.5 else 11)))
+            st.caption("🟢 conforme · 🟠 avertissement · 🔴 erreur")
+
+# ---- 6. Export -----------------------------------------------------------------------------------------------
+with tabs[5]:
+    if not SS.res or not SS.res["data"]:
+        st.info("Lancez le traitement (onglet 2).")
+    else:
+        extra = st.multiselect("Formats supplémentaires (en plus du GeoPackage et des Excel)", ["shp", "kml"], default=["shp", "kml"])
+        if st.button("💾 Générer les exports", type="primary"):
+            log = Logger(S["dir_logs"] / f"run_{date.today():%Y%m%d}.log")
             with st.spinner("Écriture des fichiers…"):
-                # colonnes en double (ex. lon/lat déjà présents dans le fichier source) : g[c] renverrait un DataFrame
-                dups = {n: sorted(set(g.columns[g.columns.duplicated()])) for n, g in SS.clean.items() if g.columns.duplicated().any()}
-                if dups:
-                    log(f"⚠ Colonnes en double supprimées avant export : {dups}")
-                    SS.clean = {n: g.loc[:, ~g.columns.duplicated()].copy() for n, g in SS.clean.items()}
-                    SS.rejected = {n: g.loc[:, ~g.columns.duplicated()].copy() for n, g in SS.rejected.items()}
-                summ = qa.summarize(SS.clean, SS.issues_clean)
-                SS.bundle = exporters.build_bundle(SS.clean, SS.rejected, SS.issues_clean, summ,
-                                                   qa.completeness(SS.clean), SS.log, fmts)
-                SS.exports = {
-                    "GeoPackage": exporters.to_gpkg(SS.clean, SS.issues_clean, summ, SS.rejected) if "GeoPackage" in fmts else None,
-                    "Shapefile": exporters.to_shp_zip(SS.clean) if "Shapefile" in fmts else None,
-                    "KML": exporters.to_kml_files(SS.clean)["PCDN_toutes_couches.kml"] if "KML" in fmts else None,
-                    "QA": exporters.qa_report_xlsx(SS.issues_clean, summ, qa.completeness(SS.clean), SS.log),
-                }
-        if SS.bundle:
-            st.success("Exports prêts.")
-            e = SS.exports
-            st.download_button("⬇ Archive complète (ZIP : GPKG + SHP + KML + rapports QA)", SS.bundle, "PCDN_export.zip",
-                               "application/zip", type="primary")
-            c1, c2, c3, c4 = st.columns(4)
-            if e["GeoPackage"]:
-                c1.download_button("GeoPackage (.gpkg)", e["GeoPackage"], "PCDN.gpkg", "application/geopackage+sqlite3")
-            if e["Shapefile"]:
-                c2.download_button("Shapefiles (ZIP)", e["Shapefile"], "PCDN_shp.zip", "application/zip")
-            if e["KML"]:
-                c3.download_button("KML (toutes couches)", e["KML"], "PCDN.kml", "application/vnd.google-earth.kml+xml")
-            c4.download_button("Rapport QA (.xlsx)", e["QA"], "rapport_QA.xlsx",
-                               "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                export_all(SS.res, SCHEMA, S, log, formats=["gpkg", "xlsx", *extra])
+            SS.exported = True
+            st.success("Exports générés (dossier `local/output/latest`, copie datée dans `archive/`).")
+        if SS.exported:
+            st.download_button("⬇️ Télécharger tout (ZIP)", zip_latest(S), f"PCDN_export_{date.today():%Y%m%d}.zip", "application/zip")
+        st.markdown("**Contenu** : `pcdn_donnees.gpkg` · `pcdn_donnees.xlsx` · `controle_qualite.xlsx` · `corrections_par_agent/*.xlsx` · "
+                    "`shp/` · `kml/` · `suivi_quotidien.csv`")

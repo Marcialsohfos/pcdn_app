@@ -1,29 +1,37 @@
-# PCDN Corridor — pipeline cartographique (Streamlit)
+# PCDN – Monitoring des données de terrain (Streamlit)
 
-FTP/FTPS → lecture SHP/KML → fusion par couche → assurance qualité → pré-traitement → export GPKG / SHP / KML.
+Portage Python/Streamlit du pipeline R `pcdn_monitoring_project` : **FTP → lecture des .shp/.kml/.zip → reconnaissance
+automatique de la couche → contrôle qualité → consolidation → exports**, avec suivi quotidien et corrections par agent.
 
-## Lancer
+## Installation
 ```bash
 pip install -r requirements.txt
-cp .streamlit/secrets.toml.example .streamlit/secrets.toml   # puis renseigner l'hôte, l'utilisateur, le mot de passe
-streamlit run app.py
 ```
-## Tests
-```bash
-python tests/test_pipeline.py   # chaîne complète sur données synthétiques
-python tests/test_ftp.py        # client FTP contre un serveur local (pip install pyftpdlib)
-python tests/test_app.py        # démarrage de l'UI
-```
-## Organisation
-- `pcdn/config.py` : schéma des 10 couches (dictionnaire .docx) ; domaines lus dans `dictionaries/*.json`
-- `pcdn/sources.py` : FTP/FTPS, découverte, détection couche/zone (nom de fichier ou dossier : `Zone 2`, `ZONE2`…)
-- `pcdn/readers.py` : SHP/KML/KMZ, reconnaissance des champs tronqués à 10 car., fusion
-- `pcdn/qa.py` : contrôles ; `pcdn/preprocess.py` : corrections ; `pcdn/exporters.py` : exports
+Identifiants FTP : copier `.streamlit/secrets.toml.example` en `.streamlit/secrets.toml` (ou définir les variables
+d'environnement `PCDN_FTP_HOST`, `PCDN_FTP_USER`, `PCDN_FTP_PWD`, `PCDN_FTP_PROTO`, `PCDN_FTP_PATH`). Ne jamais les versionner.
 
-## Contrôles QA (code → sens)
-STRUCT_* structure · GEOM_NULL/TYPE/INVALID/ZERO/BBOX/DUP · LINE_SHORT · ID_MISSING/FORMAT/PREFIX/ZONE/DUP/GAP ·
-REQ_MISSING · DOM_INVALID/DOM_CASE (valeur hors dictionnaire) · TYPE_INVALID/DECIMAL · RANGE · MULTI_EXCL ·
-L_* règles de cohérence métier · XL_GARE / XL_DIST contrôles inter-couches.
+## Utilisation
+* Interface : `streamlit run app.py` (onglets Collecte → Traitement → Tableau de bord → Anomalies → Données & carte → Export).
+* Planifié (cron / planificateur Windows) : `python run_daily.py [--skip-ftp] [--formats shp,kml]`.
 
-## Ajouter / modifier une règle ou une couche
-Éditer `pcdn/config.py` (champs) et `LOGIC` dans `pcdn/qa.py`. Déposer le JSON de domaine dans `dictionaries/<Couche>.json`.
+## Résultats (`local/output/latest/`, copie datée dans `archive/AAAA-MM-JJ/`)
+`pcdn_donnees.gpkg` · `pcdn_donnees.xlsx` · `controle_qualite.xlsx` (Resume, Par_type_anomalie, Par_agent, Anomalies,
+Journal_fichiers) · `corrections_par_agent/*.xlsx` · `shp/` · `kml/` · `../suivi_quotidien.csv`.
+
+## Contrôles
+Champs obligatoires · valeurs hors listes (casse/accents/tirets tolérés, multi-choix) · types et plages · Oui/Non ·
+géométrie vide/invalide/mauvais type · hors emprise · (0,0) · tronçons courts · identifiants dupliqués ·
+**format d'ID `ZONE<n><2 lettres de la couche><n>`** (ex. `ZONE4IN1`) · points doublons · dates futures · règles inter-champs par couche.
+
+## Différences avec la version R
+* Coordonnées KML « lon, lat,alt » (espace après la virgule) désormais lues correctement (en R elles donnaient des géométries vides).
+* Guillemets enveloppant les valeurs des KML Mapit (`"ZONE4GR1"`) retirés.
+* Doublon .kml/.shp : clé = identifiant, **à défaut le nom**, + position (~1 m).
+* Règles « Ouvrage_franchissement » : motifs corrigés (`pn garde` / `non garde`).
+* Règles de format d'ID par couche (convention ZONE) activées par défaut (`id_convention` dans `pcdn/settings.py`).
+
+## Adapter
+`pcdn/settings.py` (emprise, date de début, colonnes agent/date, seuils) · `config/pcdn_*.csv` (schéma et listes) ·
+`pcdn/checks.py` → `layer_rules()` (règles inter-champs).
+Sur Streamlit Cloud le disque est éphémère : les fichiers téléchargés et l'historique sont perdus au redémarrage ;
+pour un suivi durable, héberger l'app sur un serveur avec disque persistant.
