@@ -1,0 +1,386 @@
+layer,variable,ordre,value
+Appui_Production_Valorisation,type_unite,1,Hôpital de District / CMA
+Appui_Production_Valorisation,type_unite,2,Centre de Santé Intégré (CSI)
+Appui_Production_Valorisation,type_unite,3,École Primaire
+Appui_Production_Valorisation,type_unite,4,Lycée / CES
+Appui_Production_Valorisation,type_unite,5,Centre de Formation
+Appui_Production_Valorisation,type_unite,6,Parc à bétail / Abattoir
+Appui_Production_Valorisation,type_unite,7,Bas-fond aménagé
+Appui_Production_Valorisation,type_unite,8,Magasin de stockage d'intrants / Silo
+Appui_Production_Valorisation,type_unite,9,Unité de transformation (Moulin/Décortiqueuse)
+Appui_Production_Valorisation,type_unite,10,Point d'eau / Forage communautaire
+Appui_Production_Valorisation,type_unite,11,Poste de Police / Gendarmerie
+Appui_Production_Valorisation,type_unite,12,Poste de Douane
+Appui_Production_Valorisation,type_unite,13,Pèse-essieu
+Appui_Production_Valorisation,type_unite,14,Poste Phytosanitaire
+Appui_Production_Valorisation,type_unite,15,Bâtiment Administratif / Mairie
+Appui_Production_Valorisation,etat_fonct,1,Opérationnel (Bon état)
+Appui_Production_Valorisation,etat_fonct,2,Opérationnel (Dégradé)
+Appui_Production_Valorisation,etat_fonct,3,En panne / Hors service
+Appui_Production_Valorisation,etat_fonct,4,En construction / Abandonné
+Appui_Production_Valorisation,connexion_corridor,1,Bonne (Piste aménagée)
+Appui_Production_Valorisation,connexion_corridor,2,Moyenne (Piste dégradée)
+Appui_Production_Valorisation,connexion_corridor,3,Difficile (Piste impraticable)
+Gouvernance_Services_Securite,type_service,1,Police (commissariat)
+Gouvernance_Services_Securite,type_service,2,"Gendarmerie (brigade, légion)"
+Gouvernance_Services_Securite,type_service,3,Douane
+Gouvernance_Services_Securite,type_service,4,Sapeurs-pompiers
+Gouvernance_Services_Securite,type_service,5,Sécurité ferroviaire (police des chemins de fer)
+Gouvernance_Services_Securite,type_service,6,Sécurité privée (société de gardiennage)
+Gouvernance_Services_Securite,type_service,7,Comité de vigilance communautaire
+Gouvernance_Services_Securite,type_service,8,Autre (préciser)
+Gouvernance_Services_Securite,niveau_hierarchique,1,Poste / brigade de base
+Gouvernance_Services_Securite,niveau_hierarchique,2,Commissariat central ou légion
+Gouvernance_Services_Securite,niveau_hierarchique,3,Poste avancé ou mobile
+Gouvernance_Services_Securite,niveau_hierarchique,4,Point de contrôle temporaire
+Gouvernance_Services_Securite,etat_fonct_securite,1,Fonctionnel
+Gouvernance_Services_Securite,etat_fonct_securite,2,Partiellement fonctionnel
+Gouvernance_Services_Securite,etat_fonct_securite,3,Non fonctionnel
+Gouvernance_Services_Securite,effectif_estime,1,< 5 agents
+Gouvernance_Services_Securite,effectif_estime,2,5–15 agents
+Gouvernance_Services_Securite,effectif_estime,3,15–30 agents
+Gouvernance_Services_Securite,effectif_estime,4,> 30 agents
+Gouvernance_Services_Securite,moyens_mobilite,1,Véhicule 4×4
+Gouvernance_Services_Securite,moyens_mobilite,2,Moto
+Gouvernance_Services_Securite,moyens_mobilite,3,Aucun moyen propre
+Gouvernance_Services_Securite,moyens_mobilite,4,Autre
+Gouvernance_Services_Securite,moyens_communication,1,Radio VHF/HF
+Gouvernance_Services_Securite,moyens_communication,2,Téléphone mobile
+Gouvernance_Services_Securite,moyens_communication,3,Aucun moyen fiable
+Gouvernance_Services_Securite,distance_acces_corridor,1,< 15 min
+Gouvernance_Services_Securite,distance_acces_corridor,2,15–30 min
+Gouvernance_Services_Securite,distance_acces_corridor,3,30–60 min
+Gouvernance_Services_Securite,distance_acces_corridor,4,> 60 min
+Gouvernance_Services_Securite,nature_interventions,1,Accidents de circulation
+Gouvernance_Services_Securite,nature_interventions,2,Vols et criminalité
+Gouvernance_Services_Securite,nature_interventions,3,Occupation illégale de l'emprise ferroviaire
+Gouvernance_Services_Securite,nature_interventions,4,Trafic ou contrebande
+Gouvernance_Services_Securite,nature_interventions,5,Conflits fonciers
+Gouvernance_Services_Securite,nature_interventions,6,"Gestion de foules (marchés, gares)"
+Gouvernance_Services_Securite,nature_interventions,7,Autre
+Gouvernance_Services_Securite,frequence_interventions,1,Faible (rare)
+Gouvernance_Services_Securite,frequence_interventions,2,Moyenne
+Gouvernance_Services_Securite,frequence_interventions,3,Élevée (fréquente)
+Gouvernance_Services_Securite,existence_convention,1,Oui
+Gouvernance_Services_Securite,existence_convention,2,Non
+Gouvernance_Services_Securite,existence_convention,3,Ne sait pas
+Gouvernance_Services_Securite,source_energie_securite,1,Réseau électrique national
+Gouvernance_Services_Securite,source_energie_securite,2,Solaire
+Gouvernance_Services_Securite,source_energie_securite,3,Groupe électrogène
+Gouvernance_Services_Securite,source_energie_securite,4,Aucune
+Gouvernance_Services_Securite,reseau_telecom,1,Bonne couverture
+Gouvernance_Services_Securite,reseau_telecom,2,Couverture faible
+Gouvernance_Services_Securite,reseau_telecom,3,Aucune couverture
+Ground_Truthing_LandCover,classe_reelle,1,Zone bâtie dense / Urbaine
+Ground_Truthing_LandCover,classe_reelle,2,Zone bâtie diffuse / Rurale
+Ground_Truthing_LandCover,classe_reelle,3,Forêt dense / Couvert arborescent
+Ground_Truthing_LandCover,classe_reelle,4,Savane / Végétation basse
+Ground_Truthing_LandCover,classe_reelle,5,Zone humide / Marécage / Eau
+Ground_Truthing_LandCover,classe_reelle,6,Sol nu / Zone d'extraction
+Infrastructures_Ferroviaires,troncon,1,Douala-Yaoundé
+Infrastructures_Ferroviaires,troncon,2,Yaoundé-Bélabo
+Infrastructures_Ferroviaires,troncon,3,Bélabo-Ngaoundéré
+Infrastructures_Ferroviaires,type_infra,1,Gare voyageurs
+Infrastructures_Ferroviaires,type_infra,2,Gare marchandises (Fret)
+Infrastructures_Ferroviaires,type_infra,3,Halte
+Infrastructures_Ferroviaires,type_infra,4,Port sec / Plateforme logistique
+Infrastructures_Ferroviaires,type_infra,5,Passage à niveau
+Infrastructures_Ferroviaires,etat_fonct,1,Opérationnel (Bon état)
+Infrastructures_Ferroviaires,etat_fonct,2,Opérationnel (Dégradé)
+Infrastructures_Ferroviaires,etat_fonct,3,En panne / Hors service
+Infrastructures_Ferroviaires,etat_fonct,4,En construction / Abandonné
+Infrastructures_Ferroviaires,connexion_route,1,Piste bitumée
+Infrastructures_Ferroviaires,connexion_route,2,Piste en terre
+Infrastructures_Ferroviaires,connexion_route,3,Non connecté
+Infrastructures_Ferroviaires,mode_apport,1,Moto-taxi
+Infrastructures_Ferroviaires,mode_apport,2,Marche
+Infrastructures_Ferroviaires,mode_apport,3,Camion
+Infrastructures_Ferroviaires,mode_apport,4,Minibus
+Points_Vente_Marches,zone_implantation,1,Hub gare ferroviaire
+Points_Vente_Marches,zone_implantation,2,Marché urbain
+Points_Vente_Marches,zone_implantation,3,Marché rural de collecte
+Points_Vente_Marches,zone_implantation,4,Marché frontalier
+Points_Vente_Marches,zone_implantation,5,Abords de route
+Points_Vente_Marches,zone_implantation,6,Autre (préciser)
+Points_Vente_Marches,type_marche,1,Hub logistique fret
+Points_Vente_Marches,type_marche,2,Marché frontalier
+Points_Vente_Marches,type_marche,3,Marché de collecte agricole
+Points_Vente_Marches,type_marche,4,Point de vente informel
+Points_Vente_Marches,type_marche,5,Marché de gros
+Points_Vente_Marches,type_marche,6,Marché de détail
+Points_Vente_Marches,type_marchandise,1,Marchandises importées
+Points_Vente_Marches,type_marchandise,2,Produits manufacturés
+Points_Vente_Marches,type_marchandise,3,Produits agricoles
+Points_Vente_Marches,type_marchandise,4,Bois d'œuvre
+Points_Vente_Marches,type_marchandise,5,Produits de chasse
+Points_Vente_Marches,type_marchandise,6,Produits vivriers
+Points_Vente_Marches,type_marchandise,7,Produits de rente
+Points_Vente_Marches,type_marchandise,8,Bétail
+Points_Vente_Marches,type_marchandise,9,Autre
+Points_Vente_Marches,origine_flux,1,Local
+Points_Vente_Marches,origine_flux,2,Transfrontalier
+Points_Vente_Marches,origine_flux,3,Importation
+Points_Vente_Marches,presence_magasin_stockage,1,Oui
+Points_Vente_Marches,presence_magasin_stockage,2,Non
+Points_Vente_Marches,capacite_stockage,1,< 50 t
+Points_Vente_Marches,capacite_stockage,2,50–200 t
+Points_Vente_Marches,capacite_stockage,3,200–500 t
+Points_Vente_Marches,capacite_stockage,4,> 500 t
+Points_Vente_Marches,capacite_stockage,5,Non applicable
+Points_Vente_Marches,presence_aire_chargement,1,Oui
+Points_Vente_Marches,presence_aire_chargement,2,Non
+Points_Vente_Marches,type_aire_chargement,1,Aire bétonnée/aménagée
+Points_Vente_Marches,type_aire_chargement,2,Aire en terre battue
+Points_Vente_Marches,type_aire_chargement,3,Quai de chargement
+Points_Vente_Marches,distance_gare_route,1,< 5 km
+Points_Vente_Marches,distance_gare_route,2,5–15 km
+Points_Vente_Marches,distance_gare_route,3,15–30 km
+Points_Vente_Marches,distance_gare_route,4,> 30 km
+Points_Vente_Marches,frequence_activite,1,Quotidienne
+Points_Vente_Marches,frequence_activite,2,Hebdomadaire (jour de marché)
+Points_Vente_Marches,frequence_activite,3,Occasionnelle / saisonnière
+Points_Vente_Marches,reseau_telecom,1,Bonne couverture
+Points_Vente_Marches,reseau_telecom,2,Couverture faible
+Points_Vente_Marches,reseau_telecom,3,Aucune couverture
+Reseau_Routier_Pistes,categorie_voie,1,Route Nationale (RN)
+Reseau_Routier_Pistes,categorie_voie,2,Route Régionale
+Reseau_Routier_Pistes,categorie_voie,3,Voirie Primaire
+Reseau_Routier_Pistes,categorie_voie,4,Voirie Secondaire
+Reseau_Routier_Pistes,categorie_voie,5,Voirie Tertiaire
+Reseau_Routier_Pistes,categorie_voie,6,Piste rurale aménagée
+Reseau_Routier_Pistes,categorie_voie,7,Piste informelle
+Reseau_Routier_Pistes,type_surface,1,Bitume
+Reseau_Routier_Pistes,type_surface,2,Enduit superficiel
+Reseau_Routier_Pistes,type_surface,3,Pave autobloquant
+Reseau_Routier_Pistes,type_surface,4,Gravier
+Reseau_Routier_Pistes,type_surface,5,Latérite
+Reseau_Routier_Pistes,type_surface,6,Terre
+Reseau_Routier_Pistes,type_surface,7,Sable
+Reseau_Routier_Pistes,type_surface,8,Caillouteux
+Reseau_Routier_Pistes,type_blocage,1,Zone d'embourbement
+Reseau_Routier_Pistes,type_blocage,2,Pont endommagé
+Reseau_Routier_Pistes,type_blocage,3,Érosion / Ravinement
+Reseau_Routier_Pistes,type_blocage,4,Submersion / Inondation
+Reseau_Routier_Pistes,type_blocage,5,Aucun
+Reseau_Routier_Pistes,praticabilite_pluie,1,Accessible toute année (Toutes voitures)
+Reseau_Routier_Pistes,praticabilite_pluie,2,Accessible saison sèche uniquement
+Reseau_Routier_Pistes,praticabilite_pluie,3,Accessible 4x4 / Camion uniquement en pluie
+Reseau_Routier_Pistes,praticabilite_pluie,4,Accessible uniquement Moto / Pied
+Reseau_Routier_Pistes,praticabilite_pluie,5,Coupé / Impraticable en pluie
+Services_Sociaux_Bases,domaine_activite,1,Santé
+Services_Sociaux_Bases,domaine_activite,2,Éducation
+Services_Sociaux_Bases,domaine_activite,3,Sécurité
+Services_Sociaux_Bases,domaine_activite,4,Hydraulique
+Services_Sociaux_Bases,domaine_activite,5,Hébergement
+Services_Sociaux_Bases,domaine_activite,6,Élevage-agriculture
+Services_Sociaux_Bases,domaine_activite,7,Autre (préciser)
+Services_Sociaux_Bases,type_equipement,1,Santé – CSI
+Services_Sociaux_Bases,type_equipement,2,Santé – CMA
+Services_Sociaux_Bases,type_equipement,3,Santé – Hôpital de district
+Services_Sociaux_Bases,type_equipement,4,Santé – Pharmacie
+Services_Sociaux_Bases,type_equipement,5,Éducation – École primaire (EP)
+Services_Sociaux_Bases,type_equipement,6,Éducation – Collège
+Services_Sociaux_Bases,type_equipement,7,Éducation – Lycée
+Services_Sociaux_Bases,type_equipement,8,Éducation – Centre de formation professionnelle
+Services_Sociaux_Bases,type_equipement,9,Sécurité – Poste de gendarmerie
+Services_Sociaux_Bases,type_equipement,10,Sécurité – Commissariat de police
+Services_Sociaux_Bases,type_equipement,11,Sécurité – Poste de douane
+Services_Sociaux_Bases,type_equipement,12,Élevage-agriculture – Parc à bétail
+Services_Sociaux_Bases,type_equipement,13,Élevage-agriculture – Abattoir
+Services_Sociaux_Bases,type_equipement,14,Élevage-agriculture – Bas-fond aménagé
+Services_Sociaux_Bases,type_equipement,15,Hébergement – Hôtel
+Services_Sociaux_Bases,type_equipement,16,Hébergement – Auberge
+Services_Sociaux_Bases,type_equipement,17,Hébergement – Motel
+Services_Sociaux_Bases,type_equipement,18,Hébergement – Case de passage
+Services_Sociaux_Bases,type_equipement,19,Autre – à préciser
+Services_Sociaux_Bases,etat_fonct_service,1,Fonctionnel
+Services_Sociaux_Bases,etat_fonct_service,2,Partiellement fonctionnel
+Services_Sociaux_Bases,etat_fonct_service,3,Non fonctionnel (à l'abandon)
+Services_Sociaux_Bases,etat_fonct_service,4,En construction ou réhabilitation
+Services_Sociaux_Bases,source_energie_service,1,Solaire
+Services_Sociaux_Bases,source_energie_service,2,SONADEL
+Services_Sociaux_Bases,source_energie_service,3,Groupe électrogène
+Services_Sociaux_Bases,source_energie_service,4,Aucune
+Services_Sociaux_Bases,source_energie_service,5,Autre (préciser)
+Services_Sociaux_Bases,temps_acces_corridor,1,< 15 min
+Services_Sociaux_Bases,temps_acces_corridor,2,15–30 min
+Services_Sociaux_Bases,temps_acces_corridor,3,30–60 min
+Services_Sociaux_Bases,temps_acces_corridor,4,> 60 min
+Services_Sociaux_Bases,accessibilite,1,Toute l'année
+Services_Sociaux_Bases,accessibilite,2,Saison sèche uniquement
+Services_Sociaux_Bases,accessibilite,3,Saison pluvieuse uniquement
+Services_Sociaux_Bases,capacite_accueil,1,< 10
+Services_Sociaux_Bases,capacite_accueil,2,10–50
+Services_Sociaux_Bases,capacite_accueil,3,50–100
+Services_Sociaux_Bases,capacite_accueil,4,> 100
+Services_Sociaux_Bases,reseau_telecom,1,Bonne couverture
+Services_Sociaux_Bases,reseau_telecom,2,Couverture faible
+Services_Sociaux_Bases,reseau_telecom,3,Aucune couverture
+Activites_autour_gare,type_activite,1,Commerce informel
+Activites_autour_gare,type_activite,2,"Transport (gare routière informelle, stationnement moto-taxi)"
+Activites_autour_gare,type_activite,3,Agriculture – champs riverains
+Activites_autour_gare,type_activite,4,Pâturage – élevage extensif
+Activites_autour_gare,type_activite,5,Artisanat
+Activites_autour_gare,type_activite,6,Restauration – hôtellerie
+Activites_autour_gare,type_activite,7,"Occupation de l'emprise ferroviaire (habitat, dépôt)"
+Activites_autour_gare,type_activite,8,Autre (préciser)
+Activites_autour_gare,type_culture,1,Cultures vivrières
+Activites_autour_gare,type_culture,2,Cultures maraîchères
+Activites_autour_gare,type_culture,3,Cultures de rente
+Activites_autour_gare,type_culture,4,Autre
+Activites_autour_gare,type_elevage,1,Bovins
+Activites_autour_gare,type_elevage,2,Petits ruminants (ovins-caprins)
+Activites_autour_gare,type_elevage,3,Transhumance de passage
+Activites_autour_gare,type_elevage,4,Élevage sédentaire
+Activites_autour_gare,localisation_gare,1,Dans l'emprise ferroviaire
+Activites_autour_gare,localisation_gare,2,Abords immédiats (< 50 m)
+Activites_autour_gare,localisation_gare,3,Zone périphérique (50–200 m)
+Activites_autour_gare,localisation_gare,4,Au-delà (> 200 m)
+Activites_autour_gare,distance_voie,1,< 10 m
+Activites_autour_gare,distance_voie,2,10–50 m
+Activites_autour_gare,distance_voie,3,50–200 m
+Activites_autour_gare,distance_voie,4,> 200 m
+Activites_autour_gare,statut_occupation,1,Formel / autorisé
+Activites_autour_gare,statut_occupation,2,Informel / toléré
+Activites_autour_gare,statut_occupation,3,Illégal / en litige
+Activites_autour_gare,nature_foncier,1,Domaine ferroviaire
+Activites_autour_gare,nature_foncier,2,"Domaine public (route, trottoir)"
+Activites_autour_gare,nature_foncier,3,Propriété privée
+Activites_autour_gare,nature_foncier,4,Terre communautaire ou coutumière
+Activites_autour_gare,nature_foncier,5,Non déterminé
+Activites_autour_gare,superficie_estimee,1,"< 0,5 ha"
+Activites_autour_gare,superficie_estimee,2,"0,5–1 ha"
+Activites_autour_gare,superficie_estimee,3,1–5 ha
+Activites_autour_gare,superficie_estimee,4,> 5 ha
+Activites_autour_gare,traversee_betail,1,"Oui, fréquente"
+Activites_autour_gare,traversee_betail,2,"Oui, occasionnelle"
+Activites_autour_gare,traversee_betail,3,Non
+Activites_autour_gare,nb_exploitants,1,< 5
+Activites_autour_gare,nb_exploitants,2,5–20
+Activites_autour_gare,nb_exploitants,3,20–50
+Activites_autour_gare,nb_exploitants,4,> 50
+Activites_autour_gare,genre_exploitants,1,Majoritairement hommes
+Activites_autour_gare,genre_exploitants,2,Majoritairement femmes
+Activites_autour_gare,genre_exploitants,3,Mixte
+Activites_autour_gare,anciennete_activite,1,< 1 an
+Activites_autour_gare,anciennete_activite,2,1–5 ans
+Activites_autour_gare,anciennete_activite,3,5–10 ans
+Activites_autour_gare,anciennete_activite,4,> 10 ans
+Activites_autour_gare,point_traversee_informelle,1,Oui
+Activites_autour_gare,point_traversee_informelle,2,Non
+Activites_autour_gare,niveau_risque,1,Faible
+Activites_autour_gare,niveau_risque,2,Moyen
+Activites_autour_gare,niveau_risque,3,Élevé
+Activites_autour_gare,impact_exploitation,1,Aucun
+Activites_autour_gare,impact_exploitation,2,Gêne ponctuelle
+Activites_autour_gare,impact_exploitation,3,Entrave récurrente à la circulation des trains
+Activites_autour_gare,acces_services_base,1,Eau
+Activites_autour_gare,acces_services_base,2,Électricité
+Activites_autour_gare,acces_services_base,3,Assainissement
+Activites_autour_gare,acces_services_base,4,Aucun
+Activites_autour_gare,reseau_telecom,1,Bonne couverture
+Activites_autour_gare,reseau_telecom,2,Couverture faible
+Activites_autour_gare,reseau_telecom,3,Aucune couverture
+Gares,axe_ferroviaire,1,Douala-Yaoundé
+Gares,axe_ferroviaire,2,Yaoundé-Ngaoundéré
+Gares,axe_ferroviaire,3,Douala-Ngaoundéré
+Gares,axe_ferroviaire,4,Autre (préciser)
+Gares,type_gare,1,Gare terminus
+Gares,type_gare,2,Gare principale (bifurcation)
+Gares,type_gare,3,Gare secondaire
+Gares,type_gare,4,Halte-arrêt
+Gares,etat_fonct_garedet,1,Fonctionnelle
+Gares,etat_fonct_garedet,2,Partiellement fonctionnelle
+Gares,etat_fonct_garedet,3,Non fonctionnelle (à l'abandon)
+Gares,etat_fonct_garedet,4,En réhabilitation
+Gares,quai_embarquement,1,Existant - bon état
+Gares,quai_embarquement,2,Existant - état dégradé
+Gares,quai_embarquement,3,Inexistant
+Gares,connexion_route_gare,1,Route bitumée
+Gares,connexion_route_gare,2,Route en terre praticable
+Gares,connexion_route_gare,3,Route en terre difficilement praticable
+Gares,connexion_route_gare,4,Aucune connexion routière
+Gares,mode_acces_gare,1,A pied
+Gares,mode_acces_gare,2,Moto-taxi
+Gares,mode_acces_gare,3,Taxi ou véhicule particulier
+Gares,mode_acces_gare,4,Transport en commun (bus/car)
+Gares,mode_acces_gare,5,Vélo
+Gares,mode_acces_gare,6,Autre
+Gares,temps_acces_garedet,1,< 15 min
+Gares,temps_acces_garedet,2,15-30 min
+Gares,temps_acces_garedet,3,30-60 min
+Gares,temps_acces_garedet,4,> 60 min
+Gares,distance_approx,1,< 5 km
+Gares,distance_approx,2,5-15 km
+Gares,distance_approx,3,15-30 km
+Gares,distance_approx,4,> 30 km
+Gares,presence_magasin_gare,1,Oui
+Gares,presence_magasin_gare,2,Non
+Gares,type_magasin,1,Magasin de stockage de marchandises
+Gares,type_magasin,2,Entrepôt frigorifique
+Gares,type_magasin,3,Magasin de matériel technique
+Gares,type_magasin,4,Boutique-commerce
+Gares,type_magasin,5,Autre
+Gares,capacite_stockage_gare,1,< 100 t
+Gares,capacite_stockage_gare,2,100-500 t
+Gares,capacite_stockage_gare,3,500-1000 t
+Gares,capacite_stockage_gare,4,> 1000 t
+Gares,capacite_stockage_gare,5,Non applicable
+Gares,reseau_telecom,1,Bonne couverture
+Gares,reseau_telecom,2,Couverture faible
+Gares,reseau_telecom,3,Aucune couverture
+Gares,operateur_telecom,1,MTN
+Gares,operateur_telecom,2,Orange
+Gares,operateur_telecom,3,Camtel
+Gares,operateur_telecom,4,Nexttel
+Gares,operateur_telecom,5,Autre
+Ouvrage_franchissement,type_ouvrage,1,Passage à niveau (PN) gardé
+Ouvrage_franchissement,type_ouvrage,2,Passage à niveau (PN) non gardé
+Ouvrage_franchissement,type_ouvrage,3,Pont-route (passage supérieur)
+Ouvrage_franchissement,type_ouvrage,4,Pont-rail (passage inférieur)
+Ouvrage_franchissement,type_ouvrage,5,Passerelle piétonne
+Ouvrage_franchissement,type_ouvrage,6,Buse ou dalot (franchissement hydraulique)
+Ouvrage_franchissement,type_ouvrage,7,Passage informel (traversée sauvage)
+Ouvrage_franchissement,type_ouvrage,8,Autre (préciser)
+Ouvrage_franchissement,statut_ouvrage,1,Ouvrage officiel aménagé
+Ouvrage_franchissement,statut_ouvrage,2,Traversée tolérée non aménagée
+Ouvrage_franchissement,statut_ouvrage,3,Traversée sauvage (interdite)
+Ouvrage_franchissement,usage_principal,1,Piétons
+Ouvrage_franchissement,usage_principal,2,"Deux-roues (moto, vélo)"
+Ouvrage_franchissement,usage_principal,3,Véhicules légers
+Ouvrage_franchissement,usage_principal,4,Poids lourds
+Ouvrage_franchissement,usage_principal,5,Bétail / transhumance
+Ouvrage_franchissement,usage_principal,6,Engins agricoles
+Ouvrage_franchissement,etat_ouvrage,1,Bon état
+Ouvrage_franchissement,etat_ouvrage,2,État moyen (dégradations mineures)
+Ouvrage_franchissement,etat_ouvrage,3,Mauvais état (dégradations majeures)
+Ouvrage_franchissement,etat_ouvrage,4,Impraticable / hors service
+Ouvrage_franchissement,dispositif_securite,1,Barrières automatiques
+Ouvrage_franchissement,dispositif_securite,2,Barrières manuelles
+Ouvrage_franchissement,dispositif_securite,3,Signalisation lumineuse
+Ouvrage_franchissement,dispositif_securite,4,Signalisation par panneaux uniquement
+Ouvrage_franchissement,dispositif_securite,5,Gardien-barrières présent
+Ouvrage_franchissement,dispositif_securite,6,Aucun dispositif
+Ouvrage_franchissement,presence_gardien,1,"Oui, permanent"
+Ouvrage_franchissement,presence_gardien,2,"Oui, temporaire (heures de passage des trains)"
+Ouvrage_franchissement,presence_gardien,3,Non
+Ouvrage_franchissement,visibilite_ouvrage,1,Bonne (dégagée)
+Ouvrage_franchissement,visibilite_ouvrage,2,Moyenne (obstacles partiels)
+Ouvrage_franchissement,visibilite_ouvrage,3,"Mauvaise (végétation, courbe, bâti)"
+Ouvrage_franchissement,frequence_circulation,1,Faible (trafic occasionnel)
+Ouvrage_franchissement,frequence_circulation,2,Moyenne
+Ouvrage_franchissement,frequence_circulation,3,Forte (axe très fréquenté)
+Ouvrage_franchissement,historique_accidents,1,Aucun accident connu
+Ouvrage_franchissement,historique_accidents,2,Accidents rares (1 à 2)
+Ouvrage_franchissement,historique_accidents,3,Accidents fréquents (> 2)
+Ouvrage_franchissement,connexion_route_classee,1,Route bitumée
+Ouvrage_franchissement,connexion_route_classee,2,Route en terre praticable
+Ouvrage_franchissement,connexion_route_classee,3,Piste rurale
+Ouvrage_franchissement,connexion_route_classee,4,Sentier piéton uniquement
+Ouvrage_franchissement,distance_gare_proche,1,< 2 km
+Ouvrage_franchissement,distance_gare_proche,2,2–5 km
+Ouvrage_franchissement,distance_gare_proche,3,5–10 km
+Ouvrage_franchissement,distance_gare_proche,4,> 10 km
+Ouvrage_franchissement,necessite_rehab,1,"Oui, urgente"
+Ouvrage_franchissement,necessite_rehab,2,"Oui, à moyen terme"
+Ouvrage_franchissement,necessite_rehab,3,Non nécessaire

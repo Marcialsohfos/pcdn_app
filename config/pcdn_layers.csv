@@ -1,0 +1,11 @@
+layer,geometry,id_var,name_var
+Appui_Production_Valorisation,Point,id_infra_prod,nom_site
+Gouvernance_Services_Securite,Point,id_poste,nom_poste
+Ground_Truthing_LandCover,Point,id_point_gt,
+Infrastructures_Ferroviaires,Point,id_infra,nom_gare
+Points_Vente_Marches,Point,id_marche,nom_marche
+Reseau_Routier_Pistes,LineString,id_troncon,nom_voie
+Services_Sociaux_Bases,Point,id_service,nom_etablissement
+Activites_autour_gare,Point,id_activite,nom_designation
+Gares,Point,id_fichegare,nom_gare_detail
+Ouvrage_franchissement,Point,id_ouvrage,nom_repere
