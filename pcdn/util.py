@@ -56,6 +56,8 @@ def clean_na(s) -> pd.Series:
             out.append(None)
             continue
         t = re.sub(r"\s+", " ", str(v)).strip()
+        if len(t) >= 2 and t[0] == t[-1] == '"':          # valeurs Mapit entre guillemets ("Bitume")
+            t = t[1:-1].strip()
         out.append(None if t.lower() in NA_TOKENS else t)
     return pd.Series(out, index=ser.index, dtype="object")
 

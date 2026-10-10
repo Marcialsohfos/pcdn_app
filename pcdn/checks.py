@@ -126,7 +126,8 @@ def geometry_checks(x: gpd.GeoDataFrame, layer: str, schema: dict, settings: dic
         key = [norm_val(f"{idv[i] or ''} {nmv[i] or ''}") for i in idx]       # sans id ni nom : pas de comparaison
         tree = STRtree(pts)
         a, b = tree.query(pts, predicate="dwithin", distance=settings["dup_point_tolerance_m"])
-        flagged = {int(i) for i, j in zip(a, b) if i != j and key[i] and key[i] == key[j]}
+        grp = x["_grp"].to_numpy()[idx] if "_grp" in x.columns else np.full(len(idx), -1)
+        flagged = {int(i) for i, j in zip(a, b) if i != j and key[i] and key[i] == key[j] and not (grp[i] >= 0 and grp[i] == grp[j])}
         iss.add(sorted(idx[list(flagged)]), "warning", "doublon_spatial", "geometry", None,
                 f"Point à moins de {settings['dup_point_tolerance_m']} m d'un autre point identique (même id/nom)")
     return iss
@@ -175,59 +176,105 @@ def add_meta(x: gpd.GeoDataFrame, settings: dict) -> gpd.GeoDataFrame:
 def id_checks(x, layer, schema, settings) -> Issues:
     iss = Issues()
     id_var = schema["layers"].set_index("layer").loc[layer, "id_var"]
-    ids = x[id_var]
-    dup = np.where(ids.notna() & (ids.duplicated(keep=False)))[0]
-    iss.add(dup, "error", "id_duplique", id_var, ids.iloc[dup].tolist(), [f"Identifiant « {ids.iloc[i]} » utilisé plusieurs fois dans la couche" for i in dup])
+    ids = x[id_var].tolist()
+    d = pd.DataFrame({"i": ids, "p": x["_pos"].tolist()})
+    d = d[d["i"].notna()]
+    nun = d.groupby("i")["p"].nunique()
+    bad_ids = set(nun[nun > 1].index)                      # même ID sur des positions différentes (les copies ne comptent pas)
+    dup = [r for r, a in enumerate(ids) if a is not None and a in bad_ids]
+    iss.add(dup, "error", "id_duplique", id_var, [ids[i] for i in dup],
+            [f"Identifiant « {ids[i]} » utilisé pour plusieurs positions différentes" for i in dup])
     pat = settings.get("id_pattern")
-    if not pat and settings.get("id_convention", True):               # convention : ZONE<n> + 2 premières lettres de la couche + <n>
+    if not pat and settings.get("id_convention", True):    # ZONE<n> + 2 premières lettres de la couche + <n>
         pref = layer[:2].upper()
-        pat = rf"^ZONE\d+{pref}\d+$"
-        label = f"ZONE<n>{pref}<n>"
+        pat, label = rf"^ZONE\d+{pref}\d+$", f"ZONE<n>{pref}<n>"
     else:
         label = pat
     if pat:
-        bad = [i for i, a in enumerate(ids.tolist()) if a is not None and not re.search(pat, a)]
-        iss.add(bad, "error", "id_format", id_var, [ids.iloc[i] for i in bad], [f"Identifiant « {ids.iloc[i]} » non conforme au format attendu ({label})" for i in bad])
+        bad = [i for i, a in enumerate(ids) if a is not None and not re.search(pat, a)]
+        iss.add(bad, "error", "id_format", id_var, [ids[i] for i in bad],
+                [f"Identifiant « {ids[i]} » non conforme au format attendu ({label})" for i in bad])
     return iss
 
 
-# ---- chaîne complète pour UNE couche ------------------------------------------------------------
-def process_layer(x: gpd.GeoDataFrame, layer: str, schema: dict, settings: dict, log):
+def _cmp(v):
+    """Valeur comparable (kml/shp écrivent 'true'/'True', '5'/'5.0' différemment)."""
+    if v is None:
+        return ""
+    try:
+        return repr(float(str(v).replace(",", ".")))
+    except ValueError:
+        return norm_val(v)
+
+
+def duplicate_groups(x: gpd.GeoDataFrame, variables: list[str], id_var: str, nm_var: str | None):
+    """Repère (sans rien supprimer) les enregistrements présents plusieurs fois : même ID (ou nom) + même position (~1 m).
+    -> groupe, nature ('exact' = valeurs identiques / 'conflit' = valeurs différentes), conserver (ligne la plus complète)."""
+    n = len(x)
+    ids = x[id_var].tolist() if id_var in x.columns else [None] * n
+    nms = x[nm_var].tolist() if nm_var and nm_var in x.columns else [None] * n
+    pos = x["_pos"].tolist()
+    buckets: dict[str, list[int]] = {}
+    for r in range(n):
+        if ids[r] is None and nms[r] is None:
+            continue
+        buckets.setdefault(f"{ids[r] if ids[r] is not None else 'nom:' + str(nms[r])} {pos[r]}", []).append(r)
+    sig = [tuple(_cmp(v) for v in row) for row in x[variables].itertuples(index=False, name=None)]
+    comp = x[variables].notna().sum(axis=1).tolist()
+    fdate = pd.to_datetime(x["_file_date"]).tolist()
+    grp, nature, keep = np.full(n, -1), [""] * n, np.zeros(n, dtype=bool)
+    g = 0
+    for rows in buckets.values():
+        if len(rows) < 2:
+            continue
+        kind = "exact" if len({sig[r] for r in rows}) == 1 else "conflit"
+        best = sorted(rows, key=lambda r: (-comp[r], -fdate[r].value if pd.notna(fdate[r]) else 0, r))[0]
+        for r in rows:
+            grp[r], nature[r], keep[r] = g, kind, (r == best)
+        g += 1
+    return grp, nature, keep
+
+
+def qa_layer(raw: gpd.GeoDataFrame, layer: str, schema: dict, settings: dict, log):
+    """Contrôle une couche SANS modifier ni supprimer de ligne. -> (statut par ligne, anomalies)."""
+    from .standardize import harmonize
     lay = schema["layers"].set_index("layer").loc[layer]
     id_var = lay["id_var"]
     nm_var = lay["name_var"] if isinstance(lay["name_var"], str) and lay["name_var"] else None
     variables = schema["vars"].loc[schema["vars"]["layer"] == layer, "variable"].tolist()
-    x = x.reset_index(drop=True)
-    # 1) dédoublonnage exact entre fichiers (même enregistrement renvoyé plusieurs jours)
-    attrs = [c for c in x.columns if c not in ("geometry", "_source", "_file_date")]
-    wkt = x.geometry.to_wkt(rounding_precision=5).tolist()     # ~1 m : même enregistrement relu en .kml et .shp
-    sig = [hashlib.md5("\x1f".join([str(v) for v in row] + [w]).encode()).hexdigest()
-           for row, w in zip(x[attrs].itertuples(index=False, name=None), wkt)]
-    x = x.assign(_sig=sig).sort_values("_file_date", ascending=False, kind="stable").drop_duplicates("_sig").drop(columns="_sig")
-    x = add_meta(x.reset_index(drop=True), settings)
-    # même collecte exportée en .kml ET .shp : même id + même position (~10 cm) -> on garde la plus complète
-    if id_var in x.columns:
-        cen = x.geometry.centroid
-        pos = [f"{round(a, 5)} {round(b, 5)}" if a == a else "" for a, b in zip(cen.x, cen.y)]   # ~1 m
-        names = x[nm_var].tolist() if nm_var and nm_var in x.columns else [None] * len(x)
-        # clé = identifiant (sinon nom) + position : repère le même enregistrement relu en .kml et .shp
-        x["_k"] = [None if (i is None and n is None) else f"{i if i is not None else 'nom:' + str(n)} {p}"
-                   for i, n, p in zip(x[id_var].tolist(), names, pos)]
-        x["_comp"] = x[variables].notna().sum(axis=1)
-        n0 = len(x)
-        x = x.sort_values(["_comp", "_file_date"], ascending=False, kind="stable")
-        x = x[x["_k"].isna() | ~x["_k"].duplicated()].drop(columns=["_k", "_comp"])
-        if len(x) < n0:
-            log(f"{layer} : {n0 - len(x)} doublon(s) kml/shp fusionné(s)")
-    # 2) tri : version la plus récente d'abord
-    x = x.sort_values(["_date", "_file_date"], ascending=False, kind="stable").reset_index(drop=True)
-    x["_row"] = np.arange(len(x))
-    cz, iss = canonicalize(x, layer, schema)
-    frames = [iss.frame()]
+    x = raw.reset_index(drop=True)
+    h, _, _ = harmonize(x, layer, schema)               # copie de travail (nettoyée) : les données brutes ne sont pas touchées
+    h = add_meta(h, settings)
+    h["_row"] = np.arange(len(h))
+    cen = h.geometry.centroid
+    h["_pos"] = [f"{round(a, 5)} {round(b, 5)}" if a == a else "" for a, b in zip(cen.x, cen.y)]
+    grp, nature, keep = duplicate_groups(h, variables, id_var, nm_var)
+    h["_grp"] = grp
+    cz, iss = canonicalize(h, layer, schema)
+    parts = [iss.frame()]
     for part in (id_checks(cz, layer, schema, settings), date_checks(cz, settings), geometry_checks(cz, layer, schema, settings)):
-        frames.append(part.frame())
-    rules = Issues()
-    plain = pd.DataFrame(cz.drop(columns="geometry"))
+        parts.append(part.frame())
+    # doublons d'enregistrement : signalés, jamais supprimés
+    dup, reco = Issues(), [""] * len(cz)
+    src, lig = cz["_source"].tolist(), cz["_row_src"].tolist()
+    for gnum in sorted(set(grp[grp >= 0])):
+        rows = [int(r) for r in np.where(grp == gnum)[0]]
+        k = next(r for r in rows if keep[r])
+        for r in rows:
+            if nature[r] == "exact":
+                if r == k:
+                    reco[r] = "Conserver (ligne la plus complète du groupe)"
+                else:
+                    reco[r] = "Copie identique : à écarter après validation"
+                    dup.add([r], "warning", "doublon_exact", id_var, None,
+                            f"Copie identique de la ligne {lig[k]} de « {src[k]} » (ex. même collecte en .kml et .shp)")
+            else:
+                reco[r] = "Valeurs différentes : arbitrer" + (" (version la plus complète)" if r == k else "")
+                dup.add([r], "warning", "doublon_conflit", id_var, None,
+                        f"Mêmes ID/position que la ligne {lig[k] if r != k else [lig[q] for q in rows if q != r][0]} de « "
+                        f"{src[k] if r != k else [src[q] for q in rows if q != r][0]} » mais valeurs différentes : à arbitrer")
+    parts.append(dup.frame())
+    rules, plain = Issues(), pd.DataFrame(cz.drop(columns="geometry"))
     for sev, typ, var, msg, fn in layer_rules(layer):
         try:
             flag = np.asarray(fn(plain), dtype=bool)
@@ -235,16 +282,26 @@ def process_layer(x: gpd.GeoDataFrame, layer: str, schema: dict, settings: dict,
             log(f"Règle ignorée ({layer}) : {e}", level="WARN")
             continue
         rules.add(np.where(flag)[0], sev, typ, var, None, msg)
-    frames.append(rules.frame())
-    allis = pd.concat([f for f in frames if len(f)], ignore_index=True) if any(len(f) for f in frames) else \
-        pd.DataFrame(columns=["row", "severity", "type", "variable", "value", "message"])
-    ctx = pd.DataFrame({"row": cz["_row"].to_numpy(), "layer": layer, "id": cz[id_var].to_numpy(),
-                        "nom": cz[nm_var].to_numpy() if nm_var else None, "agent": cz["_agent"].to_numpy(),
-                        "date": cz["_date"].dt.strftime("%Y-%m-%d").to_numpy(), "fichier": cz["_source"].to_numpy()})
-    iss_df = allis.merge(ctx, on="row", how="left").drop(columns="row")
-    iss_df = iss_df[["layer", "severity", "type", "id", "nom", "agent", "date", "variable", "value", "message", "fichier"]]
-    iss_df = iss_df.assign(_e=(iss_df["severity"] != "error")).sort_values(["_e", "agent", "id"], kind="stable").drop(columns="_e").reset_index(drop=True)
+    parts.append(rules.frame())
+    cols = ["row", "severity", "type", "variable", "value", "message"]
+    allis = pd.concat([f for f in parts if len(f)], ignore_index=True) if any(len(f) for f in parts) else pd.DataFrame(columns=cols)
     n = len(cz)
-    cz["_n_err"] = np.bincount(allis.loc[allis["severity"] == "error", "row"].astype(int), minlength=n)[:n]
-    cz["_n_warn"] = np.bincount(allis.loc[allis["severity"] == "warning", "row"].astype(int), minlength=n)[:n]
-    return cz.drop(columns="_row"), iss_df
+    ctx = pd.DataFrame({"row": np.arange(n), "layer": layer, "id": cz[id_var].to_numpy(),
+                        "nom": cz[nm_var].to_numpy() if nm_var else None, "agent": cz["_agent"].to_numpy(),
+                        "date": cz["_date"].dt.strftime("%Y-%m-%d").to_numpy(),
+                        "fichier": cz["_source"].to_numpy(), "ligne": cz["_row_src"].to_numpy()})
+    iss_df = allis.merge(ctx, on="row", how="left")
+    iss_df = iss_df[["layer", "severity", "type", "id", "nom", "agent", "date", "variable", "value", "message", "fichier", "ligne", "row"]]
+    iss_df = iss_df.assign(_e=(iss_df["severity"] != "error")).sort_values(["_e", "agent", "id"], kind="stable").drop(columns="_e").reset_index(drop=True)
+    n_err = np.bincount(allis.loc[allis["severity"] == "error", "row"].astype(int), minlength=n)[:n]
+    n_warn = np.bincount(allis.loc[allis["severity"] == "warning", "row"].astype(int), minlength=n)[:n]
+    prob = allis.groupby("row")["message"].apply(lambda m: " | ".join(dict.fromkeys(m)))
+    rows_df = pd.DataFrame({
+        "couche": layer, "fichier_source": src, "ligne_source": lig, "id": cz[id_var].to_numpy(),
+        "nom": cz[nm_var].to_numpy() if nm_var else None, "agent": cz["_agent"].to_numpy(), "date": ctx["date"].to_numpy(),
+        "format": cz["_fmt"].to_numpy(), "n_err": n_err, "n_warn": n_warn,
+        "statut": np.where(n_err > 0, "À corriger", np.where(n_warn > 0, "À vérifier", "Conforme")),
+        "problemes": [prob.get(i, "") for i in range(n)],
+        "groupe_doublon": [int(g) if g >= 0 else None for g in grp], "nature_doublon": nature, "recommandation_doublon": reco,
+        "longitude": np.round(cen.x.to_numpy(), 6), "latitude": np.round(cen.y.to_numpy(), 6)})
+    return rows_df, iss_df.drop(columns="row")

@@ -70,11 +70,11 @@ def read_kml(path: Path) -> gpd.GeoDataFrame | None:
         return None
     rows, geoms = [], []
     for pm in pms:
-        att = {"placemark_name": _unquote(pm.findtext("name") or None)}
+        att = {"placemark_name": (pm.findtext("name") or None)}
         for d in pm.findall(".//ExtendedData//Data"):
             k = d.get("name")
             if k is not None:
-                att[k] = _unquote(d.findtext("value"))
+                att[k] = d.findtext("value")
         for d in pm.findall(".//SimpleData"):
             if d.get("name"):
                 att[d.get("name")] = d.text
@@ -146,4 +146,6 @@ def read_source(path: Path, file_date) -> tuple[gpd.GeoDataFrame, bool] | None:
                                     else str(v) for v in d[c].tolist()], dtype="object") for c in d.columns})
     d["_source"] = path.name
     d["_file_date"] = file_date
+    d["_row_src"] = np.arange(1, len(d) + 1)                  # n° de ligne dans le fichier d'origine
+    d["_fmt"] = path.suffix.lower().lstrip(".")
     return gpd.GeoDataFrame(d, geometry=g, crs=4326), assumed

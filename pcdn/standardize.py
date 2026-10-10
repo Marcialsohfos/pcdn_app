@@ -10,7 +10,11 @@ import pandas as pd
 
 from .util import clean_na, coalesce, norm_key, norm_val
 
-META = {"geometry", "_source", "_file_date", "_multigeom"}
+META = {"geometry", "_source", "_file_date", "_multigeom", "_row_src", "_fmt"}
+
+
+# fautes de frappe connues dans la configuration Mapit : nom de colonne normalisé -> variable du dictionnaire
+ALIASES = {"id_trocon": "id_troncon"}
 
 
 def trunc10(k) -> str:
@@ -37,7 +41,9 @@ def column_lookup(schema: dict, layer: str) -> dict:
 
     full, _ = table(norm_key)
     tr, amb_tr = table(trunc10)
-    return {"map": full, "trunc": tr, "ambiguous": amb_tr - set(full)}
+    variables = set(v["variable"])
+    alias = {k: var for k, var in ALIASES.items() if var in variables}
+    return {"map": full, "trunc": tr, "ambiguous": amb_tr - set(full), "alias": alias}
 
 
 def match_columns(cols, lk) -> list:
@@ -47,6 +53,12 @@ def match_columns(cols, lk) -> list:
         m = lk["map"].get(k)
         if m is None and len(k) <= 10:
             m = lk["trunc"].get(k)
+        if m is None:
+            m = lk.get("alias", {}).get(k)
+        if m is None and 5 <= len(k) <= 10:               # nom tronqué par le shapefile (9-10 car.) : préfixe non ambigu
+            cands = {v for key, v in lk["map"].items() if key.startswith(k)}
+            if len(cands) == 1:
+                m = next(iter(cands))
         out.append(m)
     return out
 
@@ -82,10 +94,30 @@ def harmonize(x: gpd.GeoDataFrame, layer: str, schema: dict):
         out[var] = pd.Series([None] * len(x), index=x.index, dtype="object")
     amb = sorted({norm_key(c) for c in cols} & lk["ambiguous"])
     df = pd.DataFrame(out, index=x.index)
-    for m in ("_source", "_file_date", "_multigeom"):
+    for m in ("_source", "_file_date", "_multigeom", "_row_src", "_fmt"):
         if m in x.columns:
             df[m] = x[m]
     return gpd.GeoDataFrame(df, geometry=x.geometry.values, crs=4326), missing, amb
+
+
+def rename_raw(x: gpd.GeoDataFrame, layer: str, schema: dict) -> gpd.GeoDataFrame:
+    """Données BRUTES : seuls les noms de colonnes sont alignés sur le dictionnaire (indispensable pour fusionner un .kml et un
+    .shp). Les valeurs ne sont ni nettoyées, ni converties ; les colonnes inconnues sont conservées sous leur nom d'origine."""
+    lk = column_lookup(schema, layer)
+    cols = [c for c in x.columns if c not in META]
+    names, used = [], set()
+    for c, m in zip(cols, match_columns(cols, lk)):
+        n = m if (m and m not in used) else c
+        while n in used:
+            n += "_2"
+        used.add(n)
+        names.append(n)
+    out = x[cols].copy()
+    out.columns = names
+    for m in ("_source", "_file_date", "_multigeom", "_row_src", "_fmt"):
+        if m in x.columns:
+            out[m] = x[m]
+    return gpd.GeoDataFrame(out, geometry=x.geometry.values, crs=4326)
 
 
 def split_multiselect(s, dom_values: list[str]):
