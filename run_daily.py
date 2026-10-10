@@ -1,4 +1,4 @@
-"""Exécution planifiée (cron / planificateur Windows) :  python run_daily.py [--skip-ftp] [--formats gpkg,xlsx,shp,kml]"""
+"""Exécution planifiée (cron / planificateur Windows) :  python run_daily.py [--skip-ftp] [--formats gpkg,shp,kml]"""
 import sys
 from datetime import date
 
@@ -19,7 +19,7 @@ if "--skip-ftp" not in args:
     except Exception as e:
         log(f"FTP indisponible : {e} -> traitement des fichiers déjà présents", level="ERROR")
         status = 2
-fmts = ["gpkg", "xlsx"] + (args[args.index("--formats") + 1].split(",") if "--formats" in args else [])
+fmts = args[args.index("--formats") + 1].split(",") if "--formats" in args else ["gpkg", "shp", "kml"]
 res = run_pipeline(S, schema, log)
 if res["data"]:
     export_all(res, schema, S, log, formats=fmts)
